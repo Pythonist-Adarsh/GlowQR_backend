@@ -223,17 +223,6 @@ from fastapi import File, UploadFile
 async def extract_menu(file: UploadFile = File(...)):
     file_bytes = await file.read()
     
-    # Extract text from PDF
-    try:
-        pdf_document = fitz.open(stream=file_bytes, filetype="pdf")
-        text = ""
-        for page_num in range(len(pdf_document)):
-            page = pdf_document.load_page(page_num)
-            text += page.get_text()
-    except Exception as e:
-        print(f"Error reading PDF: {e}")
-        throw_exception(status.HTTP_400_BAD_REQUEST, "Could not read the PDF file.")
-
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         print("Warning: GEMINI_API_KEY not set. Using mock data.")
@@ -256,27 +245,27 @@ async def extract_menu(file: UploadFile = File(...)):
 
     try:
         genai.configure(api_key=api_key)
-        # Use a reliable model for text extraction
-        model = genai.GenerativeModel('gemini-2.5-pro')
+        # Use gemini-2.5-flash for speed, lower quota usage, and multi-modal inline PDF support
+        model = genai.GenerativeModel('gemini-2.5-flash')
         
-        prompt = f"""
-        You are an expert menu data extractor. Extract the menu items from the following raw text from a restaurant menu PDF.
+        prompt = """
+        You are an expert menu data extractor. Extract the menu items from the following restaurant menu PDF.
         Format the output EXACTLY as this JSON structure:
-        {{
+        {
           "highlightDishes": "Dish1\\nDish2\\nDish3\\nDish4",
           "signatureDish": "Best Dish",
           "menuCategories": [
-            {{
+            {
               "category": "Category Name",
               "items": [
-                {{ "id": 1, "name": "Item Name", "emoji": "🍔", "price": "₹200" }}
+                { "id": 1, "name": "Item Name", "emoji": "🍔", "price": "₹200" }
               ]
-            }}
+            }
           ],
           "menuItems": [
-            {{ "id": 1, "name": "Item Name", "emoji": "🍔" }}
+            { "id": 1, "name": "Item Name", "emoji": "🍔" }
           ]
-        }}
+        }
         
         Rules:
         - 'highlightDishes' should be a string of 3-4 popular dishes separated by newlines.
@@ -286,12 +275,15 @@ async def extract_menu(file: UploadFile = File(...)):
         - Ensure all 'id' fields are unique integers across the entire menu.
         - Generate appropriate emojis for each dish.
         - Return ONLY valid JSON, do not wrap in markdown like ```json.
-        
-        Raw Menu Text:
-        {text}
         """
         
-        response = model.generate_content(prompt)
+        response = model.generate_content([
+            prompt,
+            {
+                "mime_type": "application/pdf",
+                "data": file_bytes
+            }
+        ])
         json_text = response.text.strip()
         if json_text.startswith("```json"):
             json_text = json_text[7:-3]
