@@ -11,3 +11,5 @@ python-dotenv
 httpx
 authlib
 itsdangerous
+google-generativeai
+PyMuPDF

@@ -1,4 +1,7 @@
 import os
+import json
+import fitz
+import google.generativeai as genai
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -218,43 +221,88 @@ from fastapi import File, UploadFile
 
 @app.post("/api/onboarding/extract-menu")
 async def extract_menu(file: UploadFile = File(...)):
-    # In a real scenario, this is where we'd pass the file bytes to an AI model (OpenAI Vision, etc.)
-    # file_bytes = await file.read()
+    file_bytes = await file.read()
     
-    # Mock AI Extraction with rich structure expected by frontend
-    return {
-        "highlightDishes": "Paneer Tikka\nButter Chicken\nGarlic Naan\nDal Makhani",
-        "signatureDish": "Special Butter Chicken",
-        "menuCategories": [
-          {
-            "category": "Starters",
-            "items": [
-              { "id": 11, "name": "Paneer Tikka", "emoji": "🧀", "price": "₹240" },
-              { "id": 12, "name": "Crispy Corn", "emoji": "🌽", "price": "₹180" },
-              { "id": 13, "name": "Veg Spring Rolls", "emoji": "🌯", "price": "₹160" }
+    # Extract text from PDF
+    try:
+        pdf_document = fitz.open(stream=file_bytes, filetype="pdf")
+        text = ""
+        for page_num in range(len(pdf_document)):
+            page = pdf_document.load_page(page_num)
+            text += page.get_text()
+    except Exception as e:
+        print(f"Error reading PDF: {e}")
+        throw_exception(status.HTTP_400_BAD_REQUEST, "Could not read the PDF file.")
+
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        print("Warning: GEMINI_API_KEY not set. Using mock data.")
+        # Fallback to mock data if no key is present to avoid breaking the app
+        return {
+            "highlightDishes": "Paneer Tikka\nButter Chicken\nGarlic Naan\nDal Makhani",
+            "signatureDish": "Special Butter Chicken",
+            "menuCategories": [
+              {
+                "category": "Mock Starters",
+                "items": [
+                  { "id": 1, "name": "Add API Key", "emoji": "⚠️", "price": "₹0" }
+                ]
+              }
+            ],
+            "menuItems": [
+              { "id": 1, "name": "Add API Key", "emoji": "⚠️" }
             ]
-          },
-          {
-            "category": "Mains",
-            "items": [
-              { "id": 14, "name": "Special Butter Chicken", "emoji": "🍗", "price": "₹380" },
-              { "id": 15, "name": "Dal Makhani Premium", "emoji": "🍲", "price": "₹290" },
-              { "id": 16, "name": "Garlic Butter Naan", "emoji": "🫓", "price": "₹80" }
-            ]
-          },
-          {
-            "category": "Desserts",
-            "items": [
-              { "id": 17, "name": "Royal Gulab Jamun", "emoji": "🧁", "price": "₹120" },
-              { "id": 18, "name": "Mango Kulfi", "emoji": "🍧", "price": "₹140" }
-            ]
-          }
-        ],
-        "menuItems": [
-          { "id": 11, "name": "Paneer Tikka", "emoji": "🧀" },
-          { "id": 12, "name": "Butter Chicken", "emoji": "🍗" }
-        ]
-    }
+        }
+
+    try:
+        genai.configure(api_key=api_key)
+        # Use a reliable model for text extraction
+        model = genai.GenerativeModel('gemini-2.5-pro')
+        
+        prompt = f"""
+        You are an expert menu data extractor. Extract the menu items from the following raw text from a restaurant menu PDF.
+        Format the output EXACTLY as this JSON structure:
+        {{
+          "highlightDishes": "Dish1\\nDish2\\nDish3\\nDish4",
+          "signatureDish": "Best Dish",
+          "menuCategories": [
+            {{
+              "category": "Category Name",
+              "items": [
+                {{ "id": 1, "name": "Item Name", "emoji": "🍔", "price": "₹200" }}
+              ]
+            }}
+          ],
+          "menuItems": [
+            {{ "id": 1, "name": "Item Name", "emoji": "🍔" }}
+          ]
+        }}
+        
+        Rules:
+        - 'highlightDishes' should be a string of 3-4 popular dishes separated by newlines.
+        - 'signatureDish' should be one standout dish.
+        - 'menuCategories' groups items by their category (e.g., Starters, Mains, Chinese, Pizza).
+        - 'menuItems' is a flat list of ALL items (just id, name, and emoji).
+        - Ensure all 'id' fields are unique integers across the entire menu.
+        - Generate appropriate emojis for each dish.
+        - Return ONLY valid JSON, do not wrap in markdown like ```json.
+        
+        Raw Menu Text:
+        {text}
+        """
+        
+        response = model.generate_content(prompt)
+        json_text = response.text.strip()
+        if json_text.startswith("```json"):
+            json_text = json_text[7:-3]
+        elif json_text.startswith("```"):
+            json_text = json_text[3:-3]
+            
+        menu_data = json.loads(json_text)
+        return menu_data
+    except Exception as e:
+        print(f"Error generating menu with AI: {e}")
+        throw_exception(status.HTTP_500_INTERNAL_SERVER_ERROR, "Failed to parse menu using AI.")
 
 @app.get("/api/qr/{slug}")
 def get_qr_page_data(slug: str, db: Session = Depends(get_db)):
