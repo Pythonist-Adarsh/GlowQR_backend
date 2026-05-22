@@ -214,8 +214,13 @@ def api_register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
 def api_login_user(user_credentials: schemas.UserLogin, db: Session = Depends(get_db)):
     return login_user(user_credentials, db)
 
+from fastapi import File, UploadFile
+
 @app.post("/api/onboarding/extract-menu")
-def extract_menu(request: schemas.MenuExtractRequest):
+async def extract_menu(file: UploadFile = File(...)):
+    # In a real scenario, this is where we'd pass the file bytes to an AI model (OpenAI Vision, etc.)
+    # file_bytes = await file.read()
+    
     # Mock AI Extraction with rich structure expected by frontend
     return {
         "highlightDishes": "Paneer Tikka\nButter Chicken\nGarlic Naan\nDal Makhani",
