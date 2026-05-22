@@ -25,10 +25,12 @@ class UserResponse(BaseModel):
     user: User
     access_token: str
     token_type: str
+    onboarding_completed: bool = False
 
 class Token(BaseModel):
     access_token: str
     token_type: str
+    onboarding_completed: bool = False
 
 class TokenData(BaseModel):
     email: Optional[str] = None

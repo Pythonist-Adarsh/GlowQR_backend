@@ -95,7 +95,8 @@ def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     return {
         "user": new_user,
         "access_token": access_token,
-        "token_type": "bearer"
+        "token_type": "bearer",
+        "onboarding_completed": False
     }
 
 @app.post("/login", response_model=schemas.Token)
@@ -104,8 +105,11 @@ def login_user(user_credentials: schemas.UserLogin, db: Session = Depends(get_db
     if not user or not auth.verify_password(user_credentials.password, user.hashed_password):
         throw_exception(status.HTTP_401_UNAUTHORIZED, "Incorrect email or password")
     
+    # Check if user has a business
+    has_business = db.query(models.Business).filter(models.Business.owner_id == user.id).first() is not None
+    
     access_token = auth.create_access_token(data={"sub": user.email})
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {"access_token": access_token, "token_type": "bearer", "onboarding_completed": has_business}
 
 # Helper function for exceptions
 def throw_exception(status_code: int, detail: str):
@@ -151,12 +155,15 @@ async def google_callback(request: Request, db: Session = Depends(get_db)):
             db.commit()
             db.refresh(user)
 
+        # Check if user has completed onboarding
+        has_business = db.query(models.Business).filter(models.Business.owner_id == user.id).first() is not None
+
         # Create JWT token
         access_token = auth.create_access_token(data={"sub": user.email})
         
         # Redirect to frontend with token
         frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
-        return RedirectResponse(url=f"{frontend_url}/auth-success?token={access_token}")
+        return RedirectResponse(url=f"{frontend_url}/auth-success?token={access_token}&onboarding_completed={str(has_business).lower()}")
         
     except Exception as e:
         print(f"OAuth Error: {str(e)}")
@@ -177,7 +184,7 @@ def create_business(business: schemas.BusinessCreate, db: Session = Depends(get_
         counter += 1
     
     new_business = models.Business(
-        **business.dict(),
+        **business.dict(exclude={"slug"}),
         slug=slug,
         owner_id=current_user.id
     )
@@ -209,9 +216,39 @@ def api_login_user(user_credentials: schemas.UserLogin, db: Session = Depends(ge
 
 @app.post("/api/onboarding/extract-menu")
 def extract_menu(request: schemas.MenuExtractRequest):
-    # Mock AI Extraction
+    # Mock AI Extraction with rich structure expected by frontend
     return {
-        "items": ["Margherita Pizza", "Pasta Carbonara", "Garlic Bread", "Tiramisu"]
+        "highlightDishes": "Paneer Tikka\nButter Chicken\nGarlic Naan\nDal Makhani",
+        "signatureDish": "Special Butter Chicken",
+        "menuCategories": [
+          {
+            "category": "Starters",
+            "items": [
+              { "id": 11, "name": "Paneer Tikka", "emoji": "🧀", "price": "₹240" },
+              { "id": 12, "name": "Crispy Corn", "emoji": "🌽", "price": "₹180" },
+              { "id": 13, "name": "Veg Spring Rolls", "emoji": "🌯", "price": "₹160" }
+            ]
+          },
+          {
+            "category": "Mains",
+            "items": [
+              { "id": 14, "name": "Special Butter Chicken", "emoji": "🍗", "price": "₹380" },
+              { "id": 15, "name": "Dal Makhani Premium", "emoji": "🍲", "price": "₹290" },
+              { "id": 16, "name": "Garlic Butter Naan", "emoji": "🫓", "price": "₹80" }
+            ]
+          },
+          {
+            "category": "Desserts",
+            "items": [
+              { "id": 17, "name": "Royal Gulab Jamun", "emoji": "🧁", "price": "₹120" },
+              { "id": 18, "name": "Mango Kulfi", "emoji": "🍧", "price": "₹140" }
+            ]
+          }
+        ],
+        "menuItems": [
+          { "id": 11, "name": "Paneer Tikka", "emoji": "🧀" },
+          { "id": 12, "name": "Butter Chicken", "emoji": "🍗" }
+        ]
     }
 
 @app.get("/api/qr/{slug}")
