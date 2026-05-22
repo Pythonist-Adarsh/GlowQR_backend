@@ -277,7 +277,7 @@ async def extract_menu(file: UploadFile = File(...)):
         - Return ONLY valid JSON, do not wrap in markdown like ```json.
         """
         
-        response = model.generate_content([
+        response = await model.generate_content_async([
             prompt,
             {
                 "mime_type": "application/pdf",
