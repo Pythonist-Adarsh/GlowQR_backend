@@ -165,7 +165,7 @@ Ratings given:
   {f"- Atmosphere: {customer_data.get('atmosphere_rating')}/5" if customer_data.get('atmosphere_rating') else ""}
 Language: {language}
 CRITICAL: You MUST write the reviews entirely in {language.upper()}. 
-{ "- HINGLISH RULES: Use conversational Hindi words in English letters (e.g. 'khana acha tha', 'bhaiya', 'bilkul theek')." if language.lower() == 'hinglish' else "- ENGLISH RULES: STRICTLY use ONLY English words. DO NOT use any Hindi words like 'na', 'bhaiya', or 'acha tha'." }
+{ "- HINGLISH RULES: Use conversational Hindi words in English letters (e.g. 'khana acha tha', 'bhaiya', 'bilkul theek')." if language.strip().lower() == 'hinglish' else "- ENGLISH RULES: STRICTLY use ONLY English words. DO NOT use any Hindi words like 'na', 'bhaiya', or 'acha tha'." }
 
 Generate 3 Google review drafts.
 Rules:
@@ -207,13 +207,13 @@ Ratings (use these to calibrate sentiment — don't mention numbers):
 
 Language: {language}
 CRITICAL: You MUST write the reviews entirely in {language.upper()}. 
-{ "- HINGLISH RULES: Use conversational Hindi words in English letters (e.g. 'khana acha tha', 'bhaiya', 'bilkul theek')." if language.lower() == 'hinglish' else "- ENGLISH RULES: STRICTLY use ONLY English words. DO NOT use any Hindi words like 'na', 'bhaiya', or 'acha tha'." }
+{ "- HINGLISH RULES: Use conversational Hindi words in English letters (e.g. 'khana acha tha', 'bhaiya', 'bilkul theek')." if language.strip().lower() == 'hinglish' else "- ENGLISH RULES: STRICTLY use ONLY English words. DO NOT use any Hindi words like 'na', 'bhaiya', or 'acha tha'." }
 Seasonal context: {business_data.get('seasonal_theme', 'none')}
 
 RATING GUIDANCE:
 {rating_guidance}
 
-Generate 5 Google review drafts.
+Generate EXACTLY 5 Google review drafts. DO NOT GENERATE FEWER THAN 5.
 Each opener must be from a different category:
   1. occasion-based, 2. item-first, 3. verdict-first, 4. comparison, 5. context
 
@@ -222,7 +222,7 @@ Include location keyword ({location}) in exactly 2 of the 5 reviews — naturall
 Include {business_data.get('signature_dish', selected_items[0] if selected_items else 'the food')} in at least 3 reviews.
 MUST BE IN {language.upper()} LANGUAGE.
 
-Return ONLY a JSON array of 5 strings.
+Return ONLY a JSON array of EXACTLY 5 strings.
 """
 
 def get_fallback_review(business_data: dict, rating: int, language: str) -> str:

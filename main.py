@@ -26,6 +26,8 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="GlowQR API")
 
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
+
 @app.middleware("http")
 async def add_forwarded_scheme(request: Request, call_next):
     if request.headers.get("x-forwarded-proto") == "https":

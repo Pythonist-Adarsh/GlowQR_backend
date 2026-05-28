@@ -12,23 +12,33 @@ api_router = APIRouter(prefix="/api/business", tags=["API Business"])
 
 @router.post("/", response_model=schemas.Business)
 def create_business(business: schemas.BusinessCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    import re
-    base_slug = business.slug or re.sub(r'[^a-z0-9]+', '-', business.name.lower()).strip('-')
-    slug = base_slug
-    counter = 1
-    while db.query(models.Business).filter(models.Business.slug == slug).first():
-        slug = f"{base_slug}-{counter}"
-        counter += 1
+    existing_business = db.query(models.Business).filter(models.Business.owner_id == current_user.id).first()
     
-    new_business = models.Business(
-        **business.model_dump(exclude={"slug"}),
-        slug=slug,
-        owner_id=current_user.id
-    )
-    db.add(new_business)
-    db.commit()
-    db.refresh(new_business)
-    return new_business
+    if existing_business:
+        # Perform upsert
+        for key, value in business.model_dump(exclude={"slug"}).items():
+            setattr(existing_business, key, value)
+        db.commit()
+        db.refresh(existing_business)
+        return existing_business
+    else:
+        import re
+        base_slug = business.slug or re.sub(r'[^a-z0-9]+', '-', business.name.lower()).strip('-')
+        slug = base_slug
+        counter = 1
+        while db.query(models.Business).filter(models.Business.slug == slug).first():
+            slug = f"{base_slug}-{counter}"
+            counter += 1
+        
+        new_business = models.Business(
+            **business.model_dump(exclude={"slug"}),
+            slug=slug,
+            owner_id=current_user.id
+        )
+        db.add(new_business)
+        db.commit()
+        db.refresh(new_business)
+        return new_business
 
 @router.get("/me", response_model=list[schemas.Business])
 def get_my_businesses(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
