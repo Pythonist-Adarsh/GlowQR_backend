@@ -7,6 +7,7 @@ from dotenv import load_dotenv
 from authlib.integrations.starlette_client import OAuth
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import RedirectResponse, JSONResponse
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from database import engine, get_db
 import models, security
 from middleware.rate_limit import setup_rate_limiting
