@@ -101,9 +101,11 @@ def record_scan(record: schemas.ScanRecordCreate, request: Request, db: Session 
 
 @router.post("/api/scan/generate-review")
 async def generate_review_endpoint(req: schemas.ReviewGenerationRequest, db: Session = Depends(get_db)):
-    qr_code = db.query(models.QRCode).filter(models.QRCode.slug == req.qr_slug).first()
-    if not qr_code:
-        raise HTTPException(status_code=404, detail="QR Code not found")
+    qr_code = None
+    if req.qr_slug and req.qr_slug.lower() != 'onboarding':
+        qr_code = db.query(models.QRCode).filter(models.QRCode.slug == req.qr_slug).first()
+        if not qr_code:
+            raise HTTPException(status_code=404, detail="QR Code not found")
         
     variants = await generate_reviews(
         business_name=req.business_name,

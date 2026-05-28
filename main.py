@@ -61,7 +61,7 @@ app.add_middleware(
 )
 
 # Session Middleware for OAuth
-app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY", "supersecret"))
+app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY", "supersecret"), same_site='none', https_only=True)
 
 # Include Routers
 app.include_router(auth_router)
