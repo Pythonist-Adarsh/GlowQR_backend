@@ -26,6 +26,13 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="GlowQR API")
 
+@app.middleware("http")
+async def add_forwarded_scheme(request: Request, call_next):
+    if request.headers.get("x-forwarded-proto") == "https":
+        request.scope["scheme"] = "https"
+    response = await call_next(request)
+    return response
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     import traceback
@@ -136,5 +143,9 @@ async def google_callback(request: Request, db: Session = Depends(get_db)):
         return RedirectResponse(url=f"{frontend_url}/auth-success?token={access_token}&onboarding_completed={str(has_business).lower()}")
         
     except Exception as e:
-        print(f"OAuth Error: {str(e)}")
-        raise HTTPException(status_code=401, detail="Could not authenticate with Google")
+        import traceback
+        trace = traceback.format_exc()
+        print(f"OAuth Error: {str(e)}\n{trace}")
+        raise HTTPException(status_code=401, detail=f"OAuth Error: {type(e).__name__} - {str(e)}")
+
+
