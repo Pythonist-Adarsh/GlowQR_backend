@@ -290,7 +290,7 @@ async def generate_reviews(
     
     config = {
         'free':   { 'variants': 1, 'max_items': 2, 'temp': 0.7, 'max_tokens': 300 },
-        'trial':   { 'variants': 1, 'max_items': 2, 'temp': 0.7, 'max_tokens': 300 },
+        'trial':   { 'variants': 5, 'max_items': 10, 'temp': 0.9, 'max_tokens': 1500 },
         'basic':   { 'variants': 3, 'max_items': 5, 'temp': 0.85, 'max_tokens': 900 },
         'premium': { 'variants': 5, 'max_items': 10, 'temp': 0.9, 'max_tokens': 1500 },
     }
@@ -311,13 +311,13 @@ async def generate_reviews(
     
     system_prompts = {
         'free': SYSTEM_PROMPT_FREE,
-        'trial': SYSTEM_PROMPT_FREE,
+        'trial': SYSTEM_PROMPT_PREMIUM,
         'basic': SYSTEM_PROMPT_BASIC,
         'premium': SYSTEM_PROMPT_PREMIUM
     }
     system = system_prompts.get(plan, SYSTEM_PROMPT_FREE)
     
-    if plan in ['trial', 'free']:
+    if plan == 'free':
         user_msg = build_free_prompt(business_data, customer_data, selected_items)
     elif plan == 'basic':
         user_msg = build_basic_prompt(business_data, customer_data, selected_items, language)

@@ -45,6 +45,7 @@ app.add_middleware(
         "http://localhost:3001",
         "http://localhost:3050",
         "https://glowqr-frontend.vercel.app",
+        "https://glow-qr-frontend.vercel.app",
         "https://glowqr-frontend-git-main-adarshs-projects-c0267937.vercel.app"
     ],
     allow_credentials=True,
