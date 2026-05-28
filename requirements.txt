@@ -13,3 +13,8 @@ authlib
 itsdangerous
 google-generativeai
 PyMuPDF
+groq
+resend
+cloudinary
+slowapi
+Pillow

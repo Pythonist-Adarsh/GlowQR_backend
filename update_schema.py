@@ -1,24 +1,26 @@
 import os
 import sqlalchemy
-from database import engine
+from database import engine, Base
+import models # Ensure models are loaded
 
-def add_column(conn, table, column, definition):
-    try:
-        conn.execute(sqlalchemy.text(f"ALTER TABLE {table} ADD COLUMN {column} {definition}"))
-        print(f"Added {column} to {table}")
-    except Exception as e:
-        print(f"Could not add {column} to {table}: {e}")
+def add_column(table, column, definition):
+    with engine.connect() as conn:
+        try:
+            conn.execute(sqlalchemy.text(f"ALTER TABLE {table} ADD COLUMN {column} {definition}"))
+            conn.commit()
+            print(f"Added {column} to {table}")
+        except Exception as e:
+            print(f"Could not add {column} to {table}: {e}")
 
-with engine.begin() as conn:
-    # Users table
-    add_column(conn, "public.users", "plan", "VARCHAR DEFAULT 'trial'")
-    add_column(conn, "public.users", "trial_ends_at", "TIMESTAMP WITH TIME ZONE")
-    add_column(conn, "public.users", "razorpay_customer_id", "VARCHAR")
-    add_column(conn, "public.users", "razorpay_subscription_id", "VARCHAR")
-    
-    # Businesses table
-    add_column(conn, "public.businesses", "negative_filter_enabled", "BOOLEAN DEFAULT FALSE")
-    add_column(conn, "public.businesses", "animation_style", "VARCHAR DEFAULT 'Glow & Float'")
-    add_column(conn, "public.businesses", "seasonal_theme", "VARCHAR")
+# Scan Events analytics additions
+add_column("public.scan_events", "qr_code_id", "INTEGER")
+add_column("public.scan_events", "user_agent", "VARCHAR")
+add_column("public.scan_events", "ip_hash", "VARCHAR")
+add_column("public.scan_events", "hour_of_day", "INTEGER")
+add_column("public.scan_events", "day_of_week", "INTEGER")
 
+# Create new tables (DailyAnalytics, OnboardingRecord)
+Base.metadata.create_all(bind=engine)
+print("Schema update complete.")
+Base.metadata.create_all(bind=engine)
 print("Schema update complete.")

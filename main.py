@@ -1,30 +1,42 @@
 import os
-import json
-import fitz
-import google.generativeai as genai
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, Request, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
-from typing import List, Any
-import models, schemas, auth, database
-from database import engine, get_db
+from sqlalchemy import text
 from dotenv import load_dotenv
 from authlib.integrations.starlette_client import OAuth
 from starlette.middleware.sessions import SessionMiddleware
-from starlette.responses import RedirectResponse
-from fastapi import Request
-import re
-from datetime import datetime, timedelta
+from starlette.responses import RedirectResponse, JSONResponse
+from database import engine, get_db
+import models, security
+from middleware.rate_limit import setup_rate_limiting
 
-# Load environment variables
-load_dotenv()
+# Import routers
+from routers.auth import router as auth_router
+from routers.onboarding import router as onboarding_router
+from routers.business import router as business_router
+from routers.business import api_router as business_api_router
+from routers.scan import router as scan_router
+from routers.analytics import router as analytics_router
+from routers.upgrade import router as upgrade_router
+from routers.admin import router as admin_router
 
-# Create tables
+load_dotenv(override=True)
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="GlowQR API")
 
-# Configure CORS
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    import traceback
+    err_msg = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
+    print(err_msg)
+    return JSONResponse(status_code=500, content={"detail": str(exc), "traceback": err_msg})
+
+# Rate Limiting
+setup_rate_limiting(app)
+
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -40,10 +52,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Add Session Middleware for OAuth
-app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY"))
+# Session Middleware for OAuth
+app.add_middleware(SessionMiddleware, secret_key=os.getenv("SECRET_KEY", "supersecret"))
 
-# OAuth Setup
+# Include Routers
+app.include_router(auth_router)
+app.include_router(onboarding_router)
+app.include_router(business_router)
+app.include_router(business_api_router)
+app.include_router(scan_router)
+app.include_router(analytics_router)
+app.include_router(upgrade_router)
+app.include_router(admin_router)
+
+# Google OAuth Setup
 oauth = OAuth()
 oauth.register(
     name='google',
@@ -59,69 +81,18 @@ oauth.register(
 async def root():
     return {"message": "Welcome to GlowQR API"}
 
-from sqlalchemy import text
-
 @app.get("/health")
 def health_check(db: Session = Depends(get_db)):
     try:
-        # Try to perform a simple query to verify DB connection
         db.execute(text("SELECT 1"))
         return {"status": "healthy", "database": "connected"}
     except Exception as e:
         print(f"Health check failed: {str(e)}")
         return {"status": "unhealthy", "database": str(e)}
 
-@app.post("/register", response_model=schemas.UserResponse)
-def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    db_user = db.query(models.User).filter(models.User.email == user.email).first()
-    if db_user:
-        throw_exception(status.HTTP_400_BAD_REQUEST, "Email already registered")
-    
-    hashed_password = auth.get_password_hash(user.password)
-    
-    # 7 day trial
-    trial_end = datetime.utcnow() + timedelta(days=7)
-    new_user = models.User(
-        email=user.email, 
-        hashed_password=hashed_password, 
-        full_name=user.full_name,
-        plan="trial",
-        trial_ends_at=trial_end
-    )
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-    
-    # Create token for immediate login
-    access_token = auth.create_access_token(data={"sub": new_user.email})
-    
-    return {
-        "user": new_user,
-        "access_token": access_token,
-        "token_type": "bearer",
-        "onboarding_completed": False
-    }
-
-@app.post("/login", response_model=schemas.Token)
-def login_user(user_credentials: schemas.UserLogin, db: Session = Depends(get_db)):
-    user = db.query(models.User).filter(models.User.email == user_credentials.email).first()
-    if not user or not auth.verify_password(user_credentials.password, user.hashed_password):
-        throw_exception(status.HTTP_401_UNAUTHORIZED, "Incorrect email or password")
-    
-    # Check if user has a business
-    has_business = db.query(models.Business).filter(models.Business.owner_id == user.id).first() is not None
-    
-    access_token = auth.create_access_token(data={"sub": user.email})
-    return {"access_token": access_token, "token_type": "bearer", "onboarding_completed": has_business}
-
-# Helper function for exceptions
-def throw_exception(status_code: int, detail: str):
-    raise HTTPException(status_code=status_code, detail=detail)
-
-# Google OAuth Implementation
 @app.get("/auth/google")
 async def google_login(request: Request):
-    redirect_uri = os.getenv("GOOGLE_REDIRECT_URI")
+    redirect_uri = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:8000/auth/google/callback")
     return await oauth.google.authorize_redirect(request, redirect_uri)
 
 @app.get("/auth/google/callback")
@@ -130,19 +101,17 @@ async def google_callback(request: Request, db: Session = Depends(get_db)):
         token = await oauth.google.authorize_access_token(request)
         user_info = token.get('userinfo')
         if not user_info:
-            throw_exception(status.HTTP_400_BAD_REQUEST, "Failed to get user info from Google")
+            raise HTTPException(status_code=400, detail="Failed to get user info")
         
         email = user_info.get('email')
         google_id = user_info.get('sub')
         full_name = user_info.get('name')
 
-        # Check if user exists
         user = db.query(models.User).filter(
             (models.User.email == email) | (models.User.google_id == google_id)
         ).first()
 
         if not user:
-            # Register new OAuth user
             user = models.User(
                 email=email,
                 google_id=google_id,
@@ -153,248 +122,18 @@ async def google_callback(request: Request, db: Session = Depends(get_db)):
             db.commit()
             db.refresh(user)
         elif not user.google_id:
-            # Link Google account to existing email account
             user.google_id = google_id
             db.commit()
             db.refresh(user)
 
-        # Check if user has completed onboarding
-        has_business = db.query(models.Business).filter(models.Business.owner_id == user.id).first() is not None
+        business = db.query(models.Business).filter(models.Business.owner_id == user.id).first()
+        has_business = business is not None and business.is_onboarded
 
-        # Create JWT token
-        access_token = auth.create_access_token(data={"sub": user.email})
+        access_token = security.create_access_token(data={"sub": user.email})
         
-        # Redirect to frontend with token
         frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
         return RedirectResponse(url=f"{frontend_url}/auth-success?token={access_token}&onboarding_completed={str(has_business).lower()}")
         
     except Exception as e:
         print(f"OAuth Error: {str(e)}")
-        throw_exception(status.HTTP_401_UNAUTHORIZED, "Could not authenticate with Google")
-
-# Business Management Endpoints
-def generate_slug(name: str):
-    return re.sub(r'[^a-z0-9]+', '-', name.lower()).strip('-')
-
-@app.post("/businesses/", response_model=schemas.Business)
-def create_business(business: schemas.BusinessCreate, db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
-    # Check if slug already exists, if so append random string or increment
-    base_slug = business.slug or generate_slug(business.name)
-    slug = base_slug
-    counter = 1
-    while db.query(models.Business).filter(models.Business.slug == slug).first():
-        slug = f"{base_slug}-{counter}"
-        counter += 1
-    
-    new_business = models.Business(
-        **business.dict(exclude={"slug"}),
-        slug=slug,
-        owner_id=current_user.id
-    )
-    db.add(new_business)
-    db.commit()
-    db.refresh(new_business)
-    return new_business
-
-@app.get("/businesses/me", response_model=List[schemas.Business])
-def get_my_businesses(db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
-    return db.query(models.Business).filter(models.Business.owner_id == current_user.id).all()
-
-@app.get("/businesses/{slug}", response_model=schemas.Business)
-def get_business_by_slug(slug: str, db: Session = Depends(get_db)):
-    business = db.query(models.Business).filter(models.Business.slug == slug).first()
-    if not business:
-        throw_exception(status.HTTP_404_NOT_FOUND, "Business not found")
-    return business
-
-# API Endpoints matching Frontend Spec
-
-@app.post("/api/auth/register", response_model=schemas.UserResponse)
-def api_register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    return register_user(user, db)
-
-@app.post("/api/auth/login", response_model=schemas.Token)
-def api_login_user(user_credentials: schemas.UserLogin, db: Session = Depends(get_db)):
-    return login_user(user_credentials, db)
-
-from fastapi import File, UploadFile
-
-@app.post("/api/onboarding/extract-menu")
-async def extract_menu(file: UploadFile = File(...)):
-    file_bytes = await file.read()
-    
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        print("Warning: GEMINI_API_KEY not set. Using mock data.")
-        # Fallback to mock data if no key is present to avoid breaking the app
-        return {
-            "highlightDishes": "Paneer Tikka\nButter Chicken\nGarlic Naan\nDal Makhani",
-            "signatureDish": "Special Butter Chicken",
-            "menuCategories": [
-              {
-                "category": "Mock Starters",
-                "items": [
-                  { "id": 1, "name": "Add API Key", "emoji": "⚠️", "price": "₹0" }
-                ]
-              }
-            ],
-            "menuItems": [
-              { "id": 1, "name": "Add API Key", "emoji": "⚠️" }
-            ]
-        }
-
-    try:
-        genai.configure(api_key=api_key)
-        # Use gemini-2.5-flash for speed, lower quota usage, and multi-modal inline PDF support
-        model = genai.GenerativeModel('gemini-2.5-flash')
-        
-        prompt = """
-        You are an expert menu data extractor. Extract the menu items from the following restaurant menu PDF.
-        Format the output EXACTLY as this JSON structure:
-        {
-          "highlightDishes": "Dish1\\nDish2\\nDish3\\nDish4",
-          "signatureDish": "Best Dish",
-          "menuCategories": [
-            {
-              "category": "Category Name",
-              "items": [
-                { "id": 1, "name": "Item Name", "emoji": "🍔", "price": "₹200" }
-              ]
-            }
-          ],
-          "menuItems": [
-            { "id": 1, "name": "Item Name", "emoji": "🍔" }
-          ]
-        }
-        
-        Rules:
-        - 'highlightDishes' should be a string of 3-4 popular dishes separated by newlines.
-        - 'signatureDish' should be one standout dish.
-        - 'menuCategories' groups items by their category (e.g., Starters, Mains, Chinese, Pizza).
-        - 'menuItems' is a flat list of ALL items (just id, name, and emoji).
-        - Ensure all 'id' fields are unique integers across the entire menu.
-        - Generate appropriate emojis for each dish.
-        - Return ONLY valid JSON, do not wrap in markdown like ```json.
-        """
-        
-        response = await model.generate_content_async([
-            prompt,
-            {
-                "mime_type": "application/pdf",
-                "data": file_bytes
-            }
-        ])
-        json_text = response.text.strip()
-        if json_text.startswith("```json"):
-            json_text = json_text[7:-3]
-        elif json_text.startswith("```"):
-            json_text = json_text[3:-3]
-            
-        menu_data = json.loads(json_text)
-        return menu_data
-    except Exception as e:
-        print(f"Error generating menu with AI: {e}")
-        throw_exception(status.HTTP_500_INTERNAL_SERVER_ERROR, "Failed to parse menu using AI.")
-
-@app.get("/api/qr/{slug}")
-def get_qr_page_data(slug: str, db: Session = Depends(get_db)):
-    business = db.query(models.Business).filter(models.Business.slug == slug).first()
-    if not business:
-        throw_exception(status.HTTP_404_NOT_FOUND, "Business not found")
-        
-    owner = db.query(models.User).filter(models.User.id == business.owner_id).first()
-    plan = owner.plan if owner else "trial"
-    if plan == "trial" and owner.trial_ends_at and datetime.utcnow() > owner.trial_ends_at:
-        plan = "expired"
-        
-    return {
-        "businessName": business.name,
-        "tagline": business.tagline or "",
-        "brandColor": business.primary_color,
-        "logoUrl": business.logo_url,
-        "address": business.address or "",
-        "plan": plan,
-        "googleReviewUrl": business.google_review_url or "",
-        "menuItems": business.menu_data or [],
-        "businessCategory": business.category or "",
-        "negativeFilterEnabled": business.negative_filter_enabled,
-        "reviewLanguage": business.review_language,
-        "aiVariantCount": int(business.ai_variant_count) if business.ai_variant_count else 3,
-        "welcomeMessage": business.welcome_message or "",
-        "animationStyle": business.animation_style,
-        "seasonalTheme": business.seasonal_theme,
-        "qrSlug": business.slug
-    }
-
-@app.post("/api/scan/record")
-def record_scan(record: schemas.ScanRecordCreate, db: Session = Depends(get_db)):
-    new_scan = models.ScanEvent(
-        business_id=record.business_id,
-        device_type=record.device_type
-    )
-    db.add(new_scan)
-    db.commit()
-    return {"status": "success"}
-
-@app.post("/api/scan/feedback")
-def submit_feedback(feedback: schemas.FeedbackSubmitCreate, db: Session = Depends(get_db)):
-    new_feedback = models.NegativeFeedback(
-        business_id=feedback.business_id,
-        rating=feedback.rating,
-        feedback_text=feedback.feedback_text
-    )
-    db.add(new_feedback)
-    db.commit()
-    return {"status": "success"}
-
-@app.post("/api/scan/generate-review")
-def generate_review(request: schemas.ReviewGenerationRequest):
-    # Mock AI generation
-    return {
-        "reviews": [
-            "Had a great time, highly recommend!",
-            "Excellent service and wonderful atmosphere.",
-            "Loved the experience, will definitely be back.",
-            "Really good value and friendly staff.",
-            "A must-visit spot in the city."
-        ][:5] # Limit based on frontend request logic
-    }
-
-from fastapi import Body
-
-@app.patch("/api/business/profile")
-def update_profile(updates: dict = Body(...), db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
-    business_id = updates.get("id")
-    if not business_id:
-        throw_exception(status.HTTP_400_BAD_REQUEST, "Business ID required")
-        
-    business = db.query(models.Business).filter(models.Business.id == business_id, models.Business.owner_id == current_user.id).first()
-    if not business:
-        throw_exception(status.HTTP_404_NOT_FOUND, "Business not found")
-        
-    for key, value in updates.items():
-        if hasattr(business, key) and key != "id":
-            setattr(business, key, value)
-            
-    db.commit()
-    db.refresh(business)
-    return business
-
-@app.post("/api/payments/create-subscription")
-def create_subscription(sub: schemas.SubscriptionCreate, current_user: models.User = Depends(auth.get_current_user)):
-    # Mock Razorpay
-    return {
-        "subscriptionId": f"sub_mock_{sub.plan}_{current_user.id}",
-        "razorpayKeyId": "rzp_test_mock_key"
-    }
-
-@app.post("/api/payments/verify")
-def verify_payment(response: dict = Body(...), db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
-    # Mock Verify
-    current_user.plan = "premium" # or basic depending on subscription logic
-    db.commit()
-    return {"status": "success", "plan": current_user.plan}
-
-@app.post("/api/webhooks/razorpay")
-def razorpay_webhook(request: Request):
-    return {"status": "received"}
+        raise HTTPException(status_code=401, detail="Could not authenticate with Google")
