@@ -400,7 +400,6 @@ Return ONLY JSON array (3-5 insights). Structure:
         return []
 
 async def extract_menu_from_image(file_bytes: bytes, mime_type: str = "image/jpeg") -> dict:
-    import requests
     base64_image = base64.b64encode(file_bytes).decode('utf-8')
     prompt = """You are an expert menu data extractor. Extract the menu items from the attached image.
 Format the output EXACTLY as this JSON structure:
@@ -425,31 +424,31 @@ Rules:
 - Generate appropriate emojis for each dish.
 - Return ONLY valid JSON, do not wrap in markdown like ```json.
 """
-    api_key = os.environ.get("GEMINI_API_KEY")
-    if not api_key:
-        print("No Gemini API key found")
-        return {"highlightDishes": "Sample Dish", "signatureDish": "Sample Signature", "menuCategories": []}
-        
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
-    payload = {
-        "contents": [{
-            "parts": [
-                {"text": prompt},
-                {"inline_data": {"mime_type": mime_type, "data": base64_image}}
-            ]
-        }],
-        "generationConfig": {"temperature": 0.2}
-    }
-    
     try:
-        res = requests.post(url, json=payload)
-        res.raise_for_status()
-        data = res.json()
-        text = data["candidates"][0]["content"]["parts"][0]["text"].strip()
+        response = client.chat.completions.create(
+            model="llama-3.2-90b-vision-preview",
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:{mime_type};base64,{base64_image}"
+                            }
+                        }
+                    ]
+                }
+            ],
+            temperature=0.2,
+            max_tokens=1500
+        )
+        text = response.choices[0].message.content.strip()
         text = text.replace('```json', '').replace('```', '').strip()
         return json.loads(text)
     except Exception as e:
-        print(f"Gemini Vision error: {e}")
+        print(f"Groq Vision error: {e}")
         return {
             "highlightDishes": "Sample Dish",
             "signatureDish": "Sample Signature",
