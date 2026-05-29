@@ -400,8 +400,7 @@ Return ONLY JSON array (3-5 insights). Structure:
         return []
 
 async def extract_menu_from_image(file_bytes: bytes, mime_type: str = "image/jpeg") -> dict:
-    base64_image = base64.b64encode(file_bytes).decode('utf-8')
-    prompt = """You are an expert menu data extractor. Extract the menu items from the attached image.
+    prompt = """You are an expert menu data extractor. Extract the menu items from the attached image/document.
 Format the output EXACTLY as this JSON structure:
 {
     "highlightDishes": "Dish1\\nDish2\\nDish3\\nDish4",
@@ -425,30 +424,57 @@ Rules:
 - Return ONLY valid JSON, do not wrap in markdown like ```json.
 """
     try:
-        response = client.chat.completions.create(
-            model="meta-llama/llama-4-scout-17b-16e-instruct",
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": prompt},
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": f"data:{mime_type};base64,{base64_image}"
+        if mime_type == "application/pdf":
+            import fitz
+            doc = fitz.open(stream=file_bytes, filetype="pdf")
+            text_content = ""
+            for page in doc:
+                text_content += page.get_text() + "\n"
+            
+            response = client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[
+                    {"role": "system", "content": prompt},
+                    {"role": "user", "content": f"Here is the text extracted from the menu PDF:\n\n{text_content}"}
+                ],
+                temperature=0.2,
+                max_tokens=1500,
+                response_format={"type": "json_object"}
+            )
+        else:
+            base64_image = base64.b64encode(file_bytes).decode('utf-8')
+            response = client.chat.completions.create(
+                model="meta-llama/llama-4-scout-17b-16e-instruct",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": prompt},
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:{mime_type};base64,{base64_image}"
+                                }
                             }
-                        }
-                    ]
-                }
-            ],
-            temperature=0.2,
-            max_tokens=1500
-        )
+                        ]
+                    }
+                ],
+                temperature=0.2,
+                max_tokens=1500
+            )
+            
         text = response.choices[0].message.content.strip()
+        
+        # Try to find JSON block using regex if the model is chatty
+        import re
+        match = re.search(r'\{.*\}', text, re.DOTALL)
+        if match:
+            text = match.group(0)
+            
         text = text.replace('```json', '').replace('```', '').strip()
         return json.loads(text)
     except Exception as e:
-        print(f"Groq Vision error: {e}")
+        print(f"Groq Extraction error: {e}")
         return {
             "highlightDishes": "Sample Dish",
             "signatureDish": "Sample Signature",
