@@ -18,3 +18,4 @@ resend
 cloudinary
 slowapi
 Pillow
+qrcode
