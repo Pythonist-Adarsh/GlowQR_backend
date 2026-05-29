@@ -15,10 +15,24 @@ BANNED_PATTERNS = [
     "impeccable service", "exquisite", "delectable",
 ]
 
+POSITIVE_WORD_POOL = [
+    "solid", "decent", "pretty good", "good", "nice", "enjoyable",
+    "satisfying", "well-made", "flavorful", "tasty", "fresh",
+    "worth it", "would return", "comes back", "recommend to friends",
+    "liked it", "quite good", "not bad at all"
+]
+
+HINGLISH_FILLER_POOL = [
+    "yaar", "bhai", "sach mein", "honestly", "ek dum",
+    "bilkul", "sahi mein", "theek hai", "mast", "solid",
+    "acha tha", "maja aaya", "time waste nahi tha"
+]
+
 SYSTEM_PROMPT_FREE = """You write authentic Google reviews for Indian local businesses.
 You help customers express their genuine experience in words.
 
 HARD RULES (never break these):
+- No Reviews will be same for business at condition  
 - No hashtags (#) anywhere
 - No emojis anywhere  
 - No promotional language ("must visit", "best in city", "hidden gem")
@@ -53,8 +67,9 @@ INDIAN AUTHENTICITY RULES:
 - People say "the food" not "the cuisine"
 - People say "staff" or "service" not "personnel" or "hospitality"  
 - People reference specific context: "came with family", "office lunch", "quick bite"
-- Price consciousness is real: "worth the price", "a bit expensive but quality was good"
-- Real complaints even in good reviews: "parking was difficult but food was good"
+- Price consciousness is real: "worth the price", "a bit expensive but quality mila"
+- Real complaints even in good reviews: "parking thoda mushkil tha but khana acha tha"
+- Indian naming: "didi", "bhaiya" for staff mentions (if service is mentioned)
 
 SEO RULES (natural insertion, never forced):
 - Include city OR area name once if it fits naturally
@@ -62,7 +77,8 @@ SEO RULES (natural insertion, never forced):
   BAD: "Best biryani in Lucknow Hazratganj Uttar Pradesh"
 - Include category keyword once naturally
   GOOD: "This cafe has become my go-to"
-  BAD: "This restaurant cafe eatery in Lucknow" """
+  BAD: "This restaurant cafe eatery in Lucknow"
+"""
 
 SYSTEM_PROMPT_PREMIUM = """You are an expert at writing authentic Indian customer reviews for Google Maps.
 You understand how real Indians write reviews — the mixture of pride, directness,
@@ -84,6 +100,7 @@ ABSOLUTE RULES (Google spam detection avoidance):
 HUMAN IMPERFECTION RULES (critical for authenticity):
 - Occasionally use "the food were" instead of "was" (Indian English pattern)
 - Use "only" as filler: "It was good only", "Service was fast only"
+- Use "na" or "nahi" in Hinglish: "bilkul theek hai na"
 - Varying sentence length: mix short punchy sentences with longer ones
 - Occasional topic shift: "Food was great. Parking is a nightmare though."
 
@@ -92,7 +109,7 @@ INDIAN CONTEXT RULES:
 - Price relativity: "₹400 per head is fair for this area"
 - Comparison awareness: "Better than [vague comparison, no competitor names]"
 - Trust signals: mention if a friend/colleague recommended (makes it social proof)
-- Staff interaction: "the waiter was helpful" or "staff suggested [dish]"
+- Staff interaction: "the waiter was helpful" or "bhaiya ne suggest kiya [dish]"
 
 SEO STRATEGY (built-in naturally):
 Primary keyword (use in 2-3 of 5 variants):
@@ -110,7 +127,8 @@ The 5 variants must use these 5 different openers (one each):
   2. Item-first: "The [dish] here is..."  
   3. Verdict-first: "[Positive/Mixed adjective] experience at [business]..."
   4. Comparison: "Finally found a [category] that..."
-  5. Context: "Been meaning to try this place..." """
+  5. Context: "Been meaning to try this place..."
+"""
 
 rating_guidance_map = {
     5: """Overall 5/5: Customer loved it. All aspects were positive.
@@ -131,50 +149,45 @@ rating_guidance_map = {
 
 def build_free_prompt(business_data, customer_data, selected_items):
     return f"""
-Customer visited: {business_data.get('name')} in {business_data.get('city', 'their city')}
+Customer visited: {business_data.get('name')} in {business_data.get('city') or 'their city'}
 They ordered: {', '.join(selected_items[:2])}
-Overall rating: {customer_data.get('overall_rating')}/5
+Overall rating: {customer_data.get('overall_rating', 4)}/5
 Language: English
-CRITICAL: You MUST write the reviews entirely in ENGLISH. STRICTLY use ONLY English words. DO NOT use any Hindi words like 'na', 'bhaiya', or 'acha tha'.
 
 Generate 3 short (2-3 sentence) Google review drafts.
 Each must sound like a different person wrote it.
-Base the sentiment on the {customer_data.get('overall_rating')}/5 rating.
+Base the sentiment on the {customer_data.get('overall_rating', 4)}/5 rating.
 
-Return ONLY a JSON array of 3 strings.
+Return ONLY a JSON object with a 'reviews' array containing the 3 strings. Like this: {{"reviews": ["rev1", "rev2", "rev3"]}}
 """
 
 def build_basic_prompt(business_data, customer_data, selected_items, language):
     area_locality = business_data.get('area', '')
     city = business_data.get('city', '')
-    location = area_locality or city
     return f"""
 Business: {business_data.get('name')}
-Location: {location}
-Type: {business_data.get('category')}
+Location: {area_locality or city}
+Type: {business_data.get('category', 'business')}
 Customer context:
   - Ordered: {', '.join(selected_items)}
-  - Meal: {customer_data.get('meal_type', 'not specified')}  
-  - Spent: {customer_data.get('price_range', 'not specified')} per person
-  - Seating: {customer_data.get('seating_type', 'not specified')}
-  - Wait time: {customer_data.get('wait_time', 'not specified')}
+  - Meal: {customer_data.get('meal_type') or 'not specified'}  
+  - Spent: {customer_data.get('price_range') or 'not specified'} per person
+  - Seating: {customer_data.get('seating_type') or 'not specified'}
+  - Wait time: {customer_data.get('wait_time') or 'not specified'}
 Ratings given:
-  - Overall: {customer_data.get('overall_rating')}/5
-  {f"- Food: {customer_data.get('food_rating')}/5" if customer_data.get('food_rating') else ""}
-  {f"- Service: {customer_data.get('service_rating')}/5" if customer_data.get('service_rating') else ""}
-  {f"- Atmosphere: {customer_data.get('atmosphere_rating')}/5" if customer_data.get('atmosphere_rating') else ""}
+  - Overall: {customer_data.get('overall_rating', 4)}/5
+  {f"- Food: {customer_data.get('food_rating')}/5" if customer_data.get('food_rating') else ''}
+  {f"- Service: {customer_data.get('service_rating')}/5" if customer_data.get('service_rating') else ''}
+  {f"- Atmosphere: {customer_data.get('atmosphere_rating')}/5" if customer_data.get('atmosphere_rating') else ''}
 Language: {language}
-CRITICAL: You MUST write the reviews entirely in {language.upper()}. 
-{ "- HINGLISH RULES: Use conversational Hindi words in English letters (e.g. 'khana acha tha', 'bhaiya', 'bilkul theek')." if language.strip().lower() == 'hinglish' else "- ENGLISH RULES: STRICTLY use ONLY English words. DO NOT use any Hindi words like 'na', 'bhaiya', or 'acha tha'." }
 
 Generate 3 Google review drafts.
 Rules:
 - Each variant must have a DIFFERENT OPENING (no variant starts with same word)
 - Reflect the actual ratings — if service was 2/5, don't praise the service
 - 3-4 sentences each
-- Include {location} naturally in ONE variant only
+- Include {area_locality or city} naturally in ONE variant only
 - Tone variety: Variant 1=casual, Variant 2=detailed, Variant 3=brief
-- MUST BE IN {language.upper()} LANGUAGE.
 
 Return ONLY a JSON object with a 'reviews' array containing the 3 strings. Like this: {{"reviews": ["rev1", "rev2", "rev3"]}}
 """
@@ -182,45 +195,39 @@ Return ONLY a JSON object with a 'reviews' array containing the 3 strings. Like 
 def build_premium_prompt(business_data, customer_data, selected_items, language, rating_guidance):
     area_locality = business_data.get('area', '')
     city = business_data.get('city', '')
-    location = area_locality or city
     return f"""
 Business: {business_data.get('name')}
 Location: {area_locality}, {city}
-Business type: {business_data.get('category')}
-Cuisine: {business_data.get('cuisine_speciality', 'not specified')}
-Tagline: {business_data.get('tagline', 'not specified')}
-Signature dish: {business_data.get('signature_dish', 'not specified')}
+Business type: {business_data.get('category', 'business')}
+Cuisine: not specified
+Tagline: {business_data.get('tagline') or 'not specified'}
+Signature dish: {business_data.get('signature_dish') or 'not specified'}
 
 Customer's full experience:
   - Ordered: {', '.join(selected_items)}
-  - Meal occasion: {customer_data.get('meal_type', 'not specified')}
-  - Seating: {customer_data.get('seating_type', 'dine-in')}  
-  - Spent: {customer_data.get('price_range', 'not specified')} per person
-  - Wait time: {customer_data.get('wait_time', 'normal')}
-  - Dietary: {', '.join(customer_data.get('dietary_options', [])) if customer_data.get('dietary_options') else 'not specified'}
+  - Meal occasion: {customer_data.get('meal_type') or 'not specified'}
+  - Seating: {customer_data.get('seating_type') or 'dine-in'}  
+  - Spent: {customer_data.get('price_range') or 'not specified'} per person
+  - Wait time: {customer_data.get('wait_time') or 'normal'}
 
 Ratings (use these to calibrate sentiment — don't mention numbers):
-  - Overall: {customer_data.get('overall_rating')}/5
-  {f"- Food quality: {customer_data.get('food_rating')}/5" if customer_data.get('food_rating') else ""}
-  {f"- Service: {customer_data.get('service_rating')}/5" if customer_data.get('service_rating') else ""}
-  {f"- Atmosphere: {customer_data.get('atmosphere_rating')}/5" if customer_data.get('atmosphere_rating') else ""}
+  - Overall: {customer_data.get('overall_rating', 4)}/5
+  {f"- Food quality: {customer_data.get('food_rating')}/5" if customer_data.get('food_rating') else ''}
+  {f"- Service: {customer_data.get('service_rating')}/5" if customer_data.get('service_rating') else ''}
+  {f"- Atmosphere: {customer_data.get('atmosphere_rating')}/5" if customer_data.get('atmosphere_rating') else ''}
 
 Language: {language}
-CRITICAL: You MUST write the reviews entirely in {language.upper()}. 
-{ "- HINGLISH RULES: Use conversational Hindi words in English letters (e.g. 'khana acha tha', 'bhaiya', 'bilkul theek')." if language.strip().lower() == 'hinglish' else "- ENGLISH RULES: STRICTLY use ONLY English words. DO NOT use any Hindi words like 'na', 'bhaiya', or 'acha tha'." }
-Seasonal context: {business_data.get('seasonal_theme', 'none')}
 
 RATING GUIDANCE:
 {rating_guidance}
 
-Generate EXACTLY 5 Google review drafts. DO NOT GENERATE FEWER THAN 5.
+Generate 5 Google review drafts.
 Each opener must be from a different category:
   1. occasion-based, 2. item-first, 3. verdict-first, 4. comparison, 5. context
 
 Vary length: 2 short (2-3 sentences), 2 medium (3-4 sentences), 1 longer (4-5 sentences)
-Include location keyword ({location}) in exactly 2 of the 5 reviews — naturally.
-Include {business_data.get('signature_dish', selected_items[0] if selected_items else 'the food')} in at least 3 reviews.
-MUST BE IN {language.upper()} LANGUAGE.
+Include location keyword ({area_locality or city}) in exactly 2 of the 5 reviews — naturally.
+Include {business_data.get('signature_dish') or (selected_items[0] if selected_items else 'the food')} in at least 3 reviews.
 
 Return ONLY a JSON object with a 'reviews' array containing EXACTLY 5 strings. Like this: {{"reviews": ["rev1", "rev2", "rev3", "rev4", "rev5"]}}
 """
@@ -245,7 +252,7 @@ def get_fallback_review(business_data: dict, rating: int, language: str) -> str:
         }
     }
     rating_key = 5 if rating >= 5 else (4 if rating >= 4 else 3)
-    lang_key = language if language in fallbacks[rating_key] else 'english'
+    lang_key = language.lower() if language.lower() in fallbacks[rating_key] else 'english'
     return fallbacks[rating_key][lang_key]
 
 async def generate_reviews(
@@ -289,16 +296,12 @@ async def generate_reviews(
     }
     
     config = {
-        'free':   { 'variants': 1, 'max_items': 2, 'temp': 0.7, 'max_tokens': 300 },
-        'trial':   { 'variants': 5, 'max_items': 10, 'temp': 0.9, 'max_tokens': 1500 },
+        'trial':   { 'variants': 1, 'max_items': 2, 'temp': 0.7, 'max_tokens': 600 },
         'basic':   { 'variants': 3, 'max_items': 5, 'temp': 0.85, 'max_tokens': 900 },
         'premium': { 'variants': 5, 'max_items': 10, 'temp': 0.9, 'max_tokens': 1500 },
     }
-    
     cfg = config.get(plan, config['trial'])
-    if variant_count and plan not in config:
-        cfg['variants'] = variant_count
-
+    
     overall = customer_data.get('overall_rating', 4)
     rating_guidance = rating_guidance_map.get(overall, rating_guidance_map[4])
     
@@ -310,14 +313,16 @@ async def generate_reviews(
         rating_guidance += " Do not mention ambiance or atmosphere."
     
     system_prompts = {
-        'free': SYSTEM_PROMPT_FREE,
-        'trial': SYSTEM_PROMPT_PREMIUM,
+        'trial': SYSTEM_PROMPT_FREE,
         'basic': SYSTEM_PROMPT_BASIC,
         'premium': SYSTEM_PROMPT_PREMIUM
     }
     system = system_prompts.get(plan, SYSTEM_PROMPT_FREE)
     
-    if plan == 'free':
+    selected_items = customer_data.get('selected_items', [])[:cfg['max_items']]
+    language = customer_data.get('language', 'english')
+    
+    if plan == 'trial':
         user_msg = build_free_prompt(business_data, customer_data, selected_items)
     elif plan == 'basic':
         user_msg = build_basic_prompt(business_data, customer_data, selected_items, language)
@@ -355,14 +360,12 @@ async def generate_reviews(
         
         while len(cleaned) < cfg['variants']:
             cleaned.append(get_fallback_review(business_data, overall, language))
-        
+            
         return cleaned[:cfg['variants']]
         
     except Exception as e:
         print(f"Groq error: {e}")
-        return [get_fallback_review(business_data, overall, language) 
-                for _ in range(cfg['variants'])]
-
+        return [get_fallback_review(business_data, overall, language) for _ in range(cfg['variants'])]
 
 async def generate_business_insights(data: dict) -> list[dict]:
     prompt = f"""You are a business advisor for Indian local businesses. Be specific and data-driven.
