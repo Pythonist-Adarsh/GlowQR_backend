@@ -176,7 +176,7 @@ Rules:
 - Tone variety: Variant 1=casual, Variant 2=detailed, Variant 3=brief
 - MUST BE IN {language.upper()} LANGUAGE.
 
-Return ONLY a JSON array of 3 strings.
+Return ONLY a JSON object with a 'reviews' array containing the 3 strings. Like this: {{"reviews": ["rev1", "rev2", "rev3"]}}
 """
 
 def build_premium_prompt(business_data, customer_data, selected_items, language, rating_guidance):
@@ -222,7 +222,7 @@ Include location keyword ({location}) in exactly 2 of the 5 reviews — naturall
 Include {business_data.get('signature_dish', selected_items[0] if selected_items else 'the food')} in at least 3 reviews.
 MUST BE IN {language.upper()} LANGUAGE.
 
-Return ONLY a JSON array of EXACTLY 5 strings.
+Return ONLY a JSON object with a 'reviews' array containing EXACTLY 5 strings. Like this: {{"reviews": ["rev1", "rev2", "rev3", "rev4", "rev5"]}}
 """
 
 def get_fallback_review(business_data: dict, rating: int, language: str) -> str:
@@ -336,7 +336,14 @@ async def generate_reviews(
         )
         text = response.choices[0].message.content.strip()
         text = text.replace('```json', '').replace('```', '').strip()
-        variants = json.loads(text)
+        try:
+            parsed = json.loads(text)
+            variants = parsed.get('reviews', []) if isinstance(parsed, dict) else parsed
+            if not isinstance(variants, list):
+                variants = []
+        except Exception as e:
+            print(f"Failed to parse JSON from Groq: {e}\nRaw Text: {text}")
+            variants = []
         
         cleaned = []
         for v in variants[:cfg['variants']]:
