@@ -21,6 +21,19 @@ def get_summary(db: Session = Depends(get_db), current_user: models.User = Depen
         
     total_scans = db.query(models.ScanEvent).filter(models.ScanEvent.business_id == business.id).count()
     
+    recent_scans = db.query(models.ScanEvent).filter(
+        models.ScanEvent.business_id == business.id,
+        models.ScanEvent.stage.in_(['completed', 'copied', 'posted']),
+    ).order_by(models.ScanEvent.scanned_at.desc()).limit(4).all()
+    
+    recent_reviews = [
+        {
+            "overall_rating": scan.overall_rating,
+            "selected_items": scan.selected_items,
+            "review_text": scan.review_text
+        } for scan in recent_scans if (scan.overall_rating or scan.selected_items or scan.review_text)
+    ]
+
     if plan == "trial":
         trial_days_left = (current_user.trial_ends_at - datetime.now(timezone.utc)).days if current_user.trial_ends_at else 0
         reviews_this_week = db.query(models.ScanEvent).filter(
@@ -34,7 +47,8 @@ def get_summary(db: Session = Depends(get_db), current_user: models.User = Depen
             "total_scans": total_scans,
             "reviews_this_week": reviews_this_week,
             "scans_last_7_days": [],
-            "google_rating": business.google_rating
+            "google_rating": business.google_rating,
+            "recent_reviews": recent_reviews
         }
         
     if plan in ["basic", "premium"]:
@@ -59,7 +73,9 @@ def get_summary(db: Session = Depends(get_db), current_user: models.User = Depen
             "scans_last_30_days": [], 
             "redirects_last_30_days": [],
             "top_menu_items": [],
-            "ratings_split": {"5": 0, "4": 0, "3": 0, "2": 0, "1": 0}
+            "ratings_split": {"5": 0, "4": 0, "3": 0, "2": 0, "1": 0},
+            "recent_reviews": recent_reviews,
+            "google_rating": business.google_rating
         }
         
         if plan == "premium":

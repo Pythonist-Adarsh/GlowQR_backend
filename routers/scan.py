@@ -94,6 +94,7 @@ def record_scan(record: schemas.ScanRecordCreate, request: Request, db: Session 
         if record.seating_type is not None: scan.seating_type = record.seating_type
         if record.wait_time is not None: scan.wait_time = record.wait_time
         if record.review_variant is not None: scan.review_variant = record.review_variant
+        if record.review_text is not None: scan.review_text = record.review_text
         if record.was_negative is not None: scan.was_negative = record.was_negative
         
         db.commit()

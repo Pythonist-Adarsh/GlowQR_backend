@@ -152,6 +152,7 @@ class ScanEvent(Base):
     seating_type = Column(String, nullable=True)
     wait_time = Column(String, nullable=True)
     review_variant = Column(Integer, nullable=True)
+    review_text = Column(String, nullable=True)
     was_negative = Column(Boolean, default=False)
     
     device_type = Column(String, nullable=True)

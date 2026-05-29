@@ -136,6 +136,7 @@ class ScanRecordCreate(BaseModel):
     seating_type: Optional[str] = None
     wait_time: Optional[str] = None
     review_variant: Optional[int] = None
+    review_text: Optional[str] = None
     was_negative: Optional[bool] = None
 
 class FeedbackSubmitCreate(BaseModel):
