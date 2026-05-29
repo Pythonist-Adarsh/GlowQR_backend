@@ -139,6 +139,8 @@ def step_3(data: schemas.OnboardingStep3, db: Session = Depends(get_db), current
 @router.post("/step/4")
 def step_4(data: schemas.OnboardingStep4, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     business = db.query(models.Business).filter(models.Business.owner_id == current_user.id).first()
+    if not business:
+        raise HTTPException(status_code=400, detail="Please complete Step 1 first")
     business.signature_dish = data.signature_dish
     business.highlighted_dishes = data.highlighted_dishes
     business.excluded_dishes = data.excluded_dishes
@@ -182,6 +184,8 @@ async def step_5(
         raise HTTPException(status_code=403, detail={"error": "plan_expired", "upgrade_url": "/upgrade"})
         
     business = db.query(models.Business).filter(models.Business.owner_id == current_user.id).first()
+    if not business:
+        raise HTTPException(status_code=400, detail="Please complete Step 1 first")
     
     animation_style = 'glow_float'
     if current_user.plan == 'basic':
