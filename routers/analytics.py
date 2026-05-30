@@ -186,3 +186,57 @@ def update_negative_alert(alert_id: int, updates: dict, db: Session = Depends(ge
     db.commit()
     db.refresh(alert)
     return {"alert": alert}
+
+@router.get('/category-ratings')
+def get_category_ratings(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    business = db.query(models.Business).filter(models.Business.owner_id == current_user.id).first()
+    if not business: return {'food': 0, 'service': 0, 'environment': 0}
+    scans = db.query(models.ScanEvent).filter(models.ScanEvent.business_id == business.id, models.ScanEvent.stage == 'posted').all()
+    if not scans: return {'food': 0, 'service': 0, 'environment': 0}
+    return {
+        'food': round(sum(s.food_rating or 0 for s in scans) / len([s for s in scans if s.food_rating]), 1) if any(s.food_rating for s in scans) else 0,
+        'service': round(sum(s.service_rating or 0 for s in scans) / len([s for s in scans if s.service_rating]), 1) if any(s.service_rating for s in scans) else 0,
+        'environment': round(sum(s.atmosphere_rating or 0 for s in scans) / len([s for s in scans if s.atmosphere_rating]), 1) if any(s.atmosphere_rating for s in scans) else 0
+    }
+
+@router.get('/scans-chart')
+def get_scans_chart(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    business = db.query(models.Business).filter(models.Business.owner_id == current_user.id).first()
+    if not business: return {'data': []}
+    days_back = 30 if current_user.plan in ['basic', 'premium'] else 3
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days_back)
+    scans = db.query(func.date(models.ScanEvent.scanned_at).label('d'), func.count(models.ScanEvent.id)).filter(
+        models.ScanEvent.business_id == business.id, models.ScanEvent.scanned_at > cutoff
+    ).group_by('d').all()
+    return {'data': [{'date': str(d), 'scans': c} for d, c in scans]}
+
+@router.get('/top-menu-items')
+def get_top_menu_items(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    business = db.query(models.Business).filter(models.Business.owner_id == current_user.id).first()
+    if not business: return {'items': []}
+    scans = db.query(models.ScanEvent.selected_items).filter(models.ScanEvent.business_id == business.id).all()
+    counts = {}
+    for (items,) in scans:
+        if items:
+            for item in items:
+                counts[item] = counts.get(item, 0) + 1
+    sorted_items = [{'name': k, 'count': v} for k, v in sorted(counts.items(), key=lambda x: x[1], reverse=True)[:5]]
+    return {'items': sorted_items}
+@router.get('/all-reviews')
+def get_all_reviews(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    business = db.query(models.Business).filter(models.Business.owner_id == current_user.id).first()
+    if not business: return {'reviews': []}
+    scans = db.query(models.ScanEvent).filter(
+        models.ScanEvent.business_id == business.id,
+        models.ScanEvent.stage.in_(['completed', 'copied', 'posted'])
+    ).order_by(models.ScanEvent.scanned_at.desc()).all()
+    reviews = []
+    for scan in scans:
+        if scan.overall_rating or scan.selected_items or scan.review_text:
+            reviews.append({
+                "overall_rating": scan.overall_rating,
+                "selected_items": scan.selected_items,
+                "review_text": scan.review_text,
+                "created_at": scan.scanned_at.isoformat() if scan.scanned_at else None
+            })
+    return {'reviews': reviews}

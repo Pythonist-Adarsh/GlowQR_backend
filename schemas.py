@@ -19,6 +19,7 @@ class User(UserBase):
     is_active: bool
     plan: str
     trial_ends_at: Optional[datetime] = None
+    current_period_end: Optional[datetime] = None
     avatar_url: Optional[str] = None
 
     class Config:

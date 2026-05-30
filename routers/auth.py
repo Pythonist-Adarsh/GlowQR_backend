@@ -17,7 +17,7 @@ def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     
     hashed_password = security_auth.get_password_hash(user.password)
     
-    trial_end = datetime.now(timezone.utc) + timedelta(days=7)
+    trial_end = datetime.now(timezone.utc) + timedelta(days=3)
     new_user = models.User(
         email=user.email, 
         hashed_password=hashed_password, 
@@ -138,6 +138,7 @@ def get_me(db: Session = Depends(get_db), current_user: models.User = Depends(ge
             "full_name": current_user.full_name,
             "plan": current_user.plan,
             "trial_ends_at": current_user.trial_ends_at,
+            "current_period_end": sub.current_period_end if 'sub' in locals() and sub else None,
             "avatar_url": current_user.avatar_url
         },
         "business": {
