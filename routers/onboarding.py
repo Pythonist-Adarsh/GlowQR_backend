@@ -22,7 +22,10 @@ def get_status(db: Session = Depends(get_db), current_user: models.User = Depend
     return {
         "is_onboarded": business.is_onboarded,
         "current_step": business.onboarding_step,
-        "business": business
+        "business": {
+            **{c.name: getattr(business, c.name) for c in business.__table__.columns},
+            "menu_items": [{"name": i.name} for i in business.menu_items] if hasattr(business, 'menu_items') else []
+        }
     }
 
 @router.post("/step/1")
@@ -49,11 +52,7 @@ def step_1(data: schemas.OnboardingStep1, db: Session = Depends(get_db), current
     business.onboarding_step = max(business.onboarding_step, 1)
     
     if data.website:
-        if not business.menu_data:
-            business.menu_data = {}
-        # Ensure it is a dict
-        if isinstance(business.menu_data, dict):
-            business.menu_data["website"] = data.website
+        business.website_url = data.website
 
     qr_code = db.query(models.QRCode).filter(models.QRCode.business_id == business.id).first()
     if not qr_code:

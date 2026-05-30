@@ -19,6 +19,9 @@ add_column("public.scan_events", "ip_hash", "VARCHAR")
 add_column("public.scan_events", "hour_of_day", "INTEGER")
 add_column("public.scan_events", "day_of_week", "INTEGER")
 
+# Add website_url to businesses
+add_column("public.businesses", "website_url", "VARCHAR")
+
 # Create new tables (DailyAnalytics, OnboardingRecord)
 Base.metadata.create_all(bind=engine)
 print("Schema update complete.")

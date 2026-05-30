@@ -59,6 +59,7 @@ class Business(Base):
     # Google Integration
     place_id = Column(String, nullable=True)
     google_review_url = Column(String, nullable=True)
+    website_url = Column(String, nullable=True)
     google_rating = Column(Float, nullable=True)
     review_count = Column(Integer, nullable=True)
     
