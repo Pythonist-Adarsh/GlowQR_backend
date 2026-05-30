@@ -55,9 +55,10 @@ def admin_login(data: schemas.AdminLoginRequest, response: Response, db: Session
         value=token,
         httponly=True,
         max_age=86400,
-        samesite="lax"
+        samesite="lax",
+        path="/"
     )
-    return {"success": True}
+    return {"success": True, "token": token}
 
 @router.patch("/change-password")
 def change_password(data: schemas.AdminChangePasswordRequest, db: Session = Depends(get_db), verified: bool = Depends(verify_admin)):
