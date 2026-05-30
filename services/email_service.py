@@ -8,7 +8,7 @@ ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "shivb9616@gmail.com")
 def send_upgrade_alert_to_admin(request: dict, approve_url: str, reject_url: str):
     amount = "₹299" if request['plan_requested'] == 'basic' else "₹699"
     resend.Emails.send({
-        "from": "GlowQR <noreply@glowqr.in>",
+        "from": "GlowQR <onboarding@resend.dev>",
         "to": [ADMIN_EMAIL],
         "subject": f"🔔 New Upgrade — {request['business_name']} wants {request['plan_requested'].upper()} {amount}",
         "html": f"""
@@ -30,7 +30,7 @@ def send_upgrade_alert_to_admin(request: dict, approve_url: str, reject_url: str
 
 def send_qr_is_live(business_name: str, owner_email: str, scan_url: str):
     resend.Emails.send({
-        "from": "GlowQR <noreply@glowqr.in>",
+        "from": "GlowQR <onboarding@resend.dev>",
         "to": [owner_email],
         "subject": f"🎉 Your GlowQR for {business_name} is live!",
         "html": f"""
@@ -44,7 +44,7 @@ def send_qr_is_live(business_name: str, owner_email: str, scan_url: str):
 
 def send_negative_feedback_alert(business_name: str, owner_email: str, rating: int, feedback_text: str):
     resend.Emails.send({
-        "from": "GlowQR <noreply@glowqr.in>",
+        "from": "GlowQR <onboarding@resend.dev>",
         "to": [owner_email],
         "subject": f"⚠️ New negative feedback — {business_name}",
         "html": f"""
