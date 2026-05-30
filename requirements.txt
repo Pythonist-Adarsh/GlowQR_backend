@@ -19,3 +19,4 @@ cloudinary
 slowapi
 Pillow
 qrcode
+PyJWT
