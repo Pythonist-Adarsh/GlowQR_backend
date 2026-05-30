@@ -12,15 +12,65 @@ from services.email_service import send_activation_email, send_rejection_email
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
 
-def verify_admin(
-    secret: str = Query(None), 
-    x_admin_secret: str = Header(None),
-    admin_session: str = Cookie(None)
-):
-    admin_secret = os.environ.get("ADMIN_SECRET", "supersecretadmin")
-    if secret == admin_secret or x_admin_secret == admin_secret or admin_session == admin_secret:
+import jwt
+from passlib.context import CryptContext
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+ADMIN_JWT_SECRET = os.environ.get("ADMIN_JWT_SECRET", "super-secret-admin-jwt-key")
+ALGORITHM = "HS256"
+
+def verify_admin(admin_session: str = Cookie(None)):
+    if not admin_session:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    try:
+        payload = jwt.decode(admin_session, ADMIN_JWT_SECRET, algorithms=[ALGORITHM])
+        if payload.get("sub") != "admin":
+            raise HTTPException(status_code=401, detail="Unauthorized")
         return True
-    raise HTTPException(status_code=401, detail="Unauthorized")
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Session expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+@router.post("/login")
+def admin_login(data: schemas.AdminLoginRequest, response: Response, db: Session = Depends(get_db)):
+    settings = db.query(models.AdminSettings).first()
+    if not settings or not settings.admin_email or not settings.admin_password_hash:
+        raise HTTPException(status_code=500, detail="Admin account not configured")
+        
+    if data.email != settings.admin_email:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+        
+    if not pwd_context.verify(data.password, settings.admin_password_hash):
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+        
+    token = jwt.encode(
+        {"sub": "admin", "exp": datetime.utcnow() + timedelta(hours=24)}, 
+        ADMIN_JWT_SECRET, 
+        algorithm=ALGORITHM
+    )
+    
+    response.set_cookie(
+        key="admin_session",
+        value=token,
+        httponly=True,
+        max_age=86400,
+        samesite="lax"
+    )
+    return {"success": True}
+
+@router.patch("/change-password")
+def change_password(data: schemas.AdminChangePasswordRequest, db: Session = Depends(get_db), verified: bool = Depends(verify_admin)):
+    settings = db.query(models.AdminSettings).first()
+    if not settings:
+        raise HTTPException(status_code=500, detail="Admin account not configured")
+        
+    if not pwd_context.verify(data.current_password, settings.admin_password_hash):
+        raise HTTPException(status_code=400, detail="Incorrect current password")
+        
+    settings.admin_password_hash = pwd_context.hash(data.new_password)
+    db.commit()
+    return {"success": True, "message": "Password updated"}
 
 @router.get("/stats")
 def get_stats(db: Session = Depends(get_db), verified: bool = Depends(verify_admin)):

@@ -277,5 +277,7 @@ class AdminSettings(Base):
     notification_email = Column(String, nullable=True)
     notify_on_upgrade = Column(Boolean, default=True)
     notify_on_negative = Column(Boolean, default=True)
+    admin_email = Column(String, nullable=True)
+    admin_password_hash = Column(String, nullable=True)
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 

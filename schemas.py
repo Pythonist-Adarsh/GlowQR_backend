@@ -165,6 +165,25 @@ class ReviewGenerationRequest(BaseModel):
     plan: str = "trial"
     city: Optional[str] = None
 
+class MenuItemAnalytics(BaseModel):
+    name: str
+    count: int
+
+class DailyAnalyticsResponse(BaseModel):
+    date: str
+    scans: int
+    redirects: int
+    avg_rating: Optional[float]
+    top_items: List[MenuItemAnalytics]
+
+class AdminLoginRequest(BaseModel):
+    email: str
+    password: str
+
+class AdminChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str
+
 class QRCodeCreate(BaseModel):
     label: str
 
