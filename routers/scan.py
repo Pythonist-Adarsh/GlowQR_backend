@@ -42,6 +42,7 @@ def get_qr_page_data(slug: str, db: Session = Depends(get_db)):
         "address": business.address or "",
         "city": business.city or "",
         "plan": plan,
+        "website": business.menu_data.get('website', '') if isinstance(business.menu_data, dict) else (business.website if hasattr(business, 'website') else ""),
         "google_review_url": business.google_review_url or "",
         "menu_items": menu_items,
         "business_category": business.category or "",
@@ -79,9 +80,25 @@ def record_scan(record: schemas.ScanRecordCreate, request: Request, db: Session 
         db.commit()
         return {"session_id": session_id, "recorded": True}
     else:
-        scan = db.query(models.ScanEvent).filter(models.ScanEvent.session_id == record.session_id).first()
+        scan = None
+        if record.session_id:
+            scan = db.query(models.ScanEvent).filter(models.ScanEvent.session_id == record.session_id).first()
+            
         if not scan:
-            raise HTTPException(status_code=404, detail="Session not found")
+            # Session not found or not provided, create a new record to avoid losing data
+            session_id = record.session_id or secrets.token_hex(5)
+            ip_hash = hashlib.sha256(request.client.host.encode()).hexdigest() if request.client else None
+            user_agent = request.headers.get('user-agent')
+            scan = models.ScanEvent(
+                qr_code_id=qr_code.id,
+                business_id=qr_code.business_id,
+                session_id=session_id,
+                stage=record.stage,
+                ip_hash=ip_hash,
+                user_agent=user_agent,
+                device_type=record.device_type
+            )
+            db.add(scan)
             
         scan.stage = record.stage
         if record.overall_rating is not None: scan.overall_rating = record.overall_rating
@@ -98,7 +115,7 @@ def record_scan(record: schemas.ScanRecordCreate, request: Request, db: Session 
         if record.was_negative is not None: scan.was_negative = record.was_negative
         
         db.commit()
-        return {"session_id": record.session_id, "recorded": True}
+        return {"session_id": scan.session_id, "recorded": True}
 
 @router.post("/api/scan/generate-review")
 async def generate_review_endpoint(req: schemas.ReviewGenerationRequest, db: Session = Depends(get_db)):
