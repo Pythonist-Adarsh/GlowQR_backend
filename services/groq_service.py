@@ -272,7 +272,7 @@ async def generate_reviews(
     plan: str = 'trial',
     seating_type: str = None,
     wait_time: str = None,
-    city: str = ""
+    city: str = None
 ) -> list[str]:
     
     business_data = {
@@ -280,7 +280,7 @@ async def generate_reviews(
         'category': category,
         'tagline': tagline,
         'signature_dish': signature_dish,
-        'city': city,
+        'city': city or '',
         'area': ''
     }
     customer_data = {

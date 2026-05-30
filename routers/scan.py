@@ -42,7 +42,7 @@ def get_qr_page_data(slug: str, db: Session = Depends(get_db)):
         "address": business.address or "",
         "city": business.city or "",
         "plan": plan,
-        "website": business.menu_data.get('website', '') if isinstance(business.menu_data, dict) else (business.website if hasattr(business, 'website') else ""),
+        "website": getattr(business, 'website_url', getattr(business, 'website', '')),
         "google_review_url": business.google_review_url or "",
         "menu_items": menu_items,
         "business_category": business.category or "",
@@ -139,7 +139,8 @@ async def generate_review_endpoint(req: schemas.ReviewGenerationRequest, db: Ses
         price_range=req.price_range,
         language=req.language,
         variant_count=req.variant_count,
-        plan=req.plan
+        plan=req.plan,
+        city=req.city
     )
     
     return {"variants": variants, "language": req.language}

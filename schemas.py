@@ -163,6 +163,7 @@ class ReviewGenerationRequest(BaseModel):
     language: str = "english"
     variant_count: int = 3
     plan: str = "trial"
+    city: Optional[str] = None
 
 class QRCodeCreate(BaseModel):
     label: str
