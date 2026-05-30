@@ -57,6 +57,7 @@ class BusinessBase(BaseModel):
     tagline: Optional[str] = None
     primary_color: str = "#6366F1"
     google_review_url: Optional[str] = None
+    website_url: Optional[str] = None
     phone_number: Optional[str] = None
     whatsapp_number: Optional[str] = None
     address: Optional[str] = None
