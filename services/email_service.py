@@ -57,3 +57,40 @@ def send_negative_feedback_alert(business_name: str, owner_email: str, rating: i
         <p><a href="{APP_URL}/dashboard/analytics">View in Dashboard</a></p>
         """
     })
+
+def send_activation_email(user, business_name: str, plan: str, expires_at):
+    try:
+        resend.Emails.send({
+            "from": "GlowQR <onboarding@resend.dev>",
+            "to": [user.email],
+            "subject": f"🎉 Your GlowQR {plan.capitalize()} Plan is Now Active!",
+            "html": f"""
+            <h3>Hi {user.email},</h3>
+            <p>Your {plan.upper()} plan for <b>{business_name}</b> is now active.</p>
+            <p>Valid until: <b>{expires_at.strftime('%B %d, %Y')}</b></p>
+            <br>
+            <p><a href="{APP_URL}/login" style="background:#16a34a;color:white;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold">Login to your dashboard</a></p>
+            <br>
+            <p>— GlowQR Team</p>
+            """
+        })
+    except Exception as e:
+        print(f"Failed to send activation email: {e}")
+
+def send_rejection_email(user, business_name: str, reason: str):
+    try:
+        resend.Emails.send({
+            "from": "GlowQR <onboarding@resend.dev>",
+            "to": [user.email],
+            "subject": "GlowQR Payment Verification — Action Required",
+            "html": f"""
+            <h3>Hi {user.email},</h3>
+            <p>We could not verify your payment for <b>{business_name}</b>.</p>
+            <p>Reason: <b>{reason}</b></p>
+            <p>Please contact us at support@glowqr.in or resend your UTR.</p>
+            <br>
+            <p>— GlowQR Team</p>
+            """
+        })
+    except Exception as e:
+        print(f"Failed to send rejection email: {e}")

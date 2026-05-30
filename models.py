@@ -265,3 +265,17 @@ class OnboardingRecord(Base):
     completed_at = Column(DateTime(timezone=True), server_default=func.now())
     
     business = relationship("Business")
+
+class AdminSettings(Base):
+    __tablename__ = "admin_settings"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    upi_id = Column(String, nullable=True)
+    upi_qr_url = Column(String, nullable=True)
+    basic_plan_price = Column(Integer, default=299)
+    premium_plan_price = Column(Integer, default=699)
+    notification_email = Column(String, nullable=True)
+    notify_on_upgrade = Column(Boolean, default=True)
+    notify_on_negative = Column(Boolean, default=True)
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+

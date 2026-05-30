@@ -182,8 +182,31 @@ class UpgradeRequestCreate(BaseModel):
     plan: str
     contact_name: str
     phone: str
+    amount: int
     utr_number: Optional[str] = None
-    payment_method: str
+    payment_method: str = "upi"
+
+class AdminSettingsUpdate(BaseModel):
+    upi_id: Optional[str] = None
+    basic_plan_price: Optional[int] = None
+    premium_plan_price: Optional[int] = None
+    notification_email: Optional[str] = None
+    notify_on_upgrade: Optional[bool] = None
+    notify_on_negative: Optional[bool] = None
+
+class AdminSettingsResponse(BaseModel):
+    upi_id: Optional[str] = None
+    upi_qr_url: Optional[str] = None
+    basic_plan_price: int
+    premium_plan_price: int
+    notification_email: Optional[str] = None
+    notify_on_upgrade: bool
+    notify_on_negative: bool
+
+class AdminUserPlanUpdate(BaseModel):
+    plan: str
+    expires_at: Optional[datetime] = None
+    admin_note: Optional[str] = None
 
 class SubscriptionCreate(BaseModel):
     plan: str
