@@ -37,6 +37,8 @@ def request_upgrade(data: schemas.UpgradeRequestCreate, db: Session = Depends(ge
     approve_url = f"{api_url}/api/admin/upgrade/approve?id={upgrade_req.id}&secret={admin_secret}"
     reject_url = f"{api_url}/api/admin/upgrade/reject?id={upgrade_req.id}&secret={admin_secret}"
     
+    email_sent = True
+    email_error = None
     try:
         send_upgrade_alert_to_admin(
             {
@@ -54,10 +56,14 @@ def request_upgrade(data: schemas.UpgradeRequestCreate, db: Session = Depends(ge
         )
     except Exception as e:
         print(f"Failed to send admin email: {e}")
+        email_sent = False
+        email_error = str(e)
         
     return {
         "request_id": upgrade_req.id,
         "reference_code": reference_code,
+        "email_sent": email_sent,
+        "email_error": email_error,
         "message": "Request received. You'll get an email once activated within 2-4 hours."
     }
 

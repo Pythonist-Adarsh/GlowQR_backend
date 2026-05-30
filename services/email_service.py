@@ -3,7 +3,8 @@ import os
 
 resend.api_key = os.environ.get("RESEND_API_KEY")
 APP_URL = os.environ.get("APP_URL", "https://glow-qr-frontend.vercel.app")
-ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL", "professional.adarsh.00@gmail.com")
+# Hardcode to ensure Render doesn't override with an old invalid email
+ADMIN_EMAIL = "professional.adarsh.00@gmail.com"
 
 def send_upgrade_alert_to_admin(request: dict, approve_url: str, reject_url: str):
     amount = "₹299" if request['plan_requested'] == 'basic' else "₹699"
