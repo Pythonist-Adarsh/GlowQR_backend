@@ -20,7 +20,7 @@ async def upload_logo_to_cloudinary(file_bytes: bytes, business_id: int) -> str:
             file_bytes,
             folder=f"glowqr/logos/{business_id}",
             transformation=[
-                {"width": 300, "height": 300, "crop": "fill", "gravity": "auto"},
+                {"width": 500, "height": 500, "crop": "limit"},
                 {"quality": "auto", "fetch_format": "auto"}
             ]
         )
