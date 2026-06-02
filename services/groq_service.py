@@ -425,41 +425,18 @@ Rules:
 - Return ONLY valid JSON, do not wrap in markdown like ```json.
 """
     try:
-        if mime_type == "application/pdf":
-            import google.generativeai as genai
-            genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
-            model = genai.GenerativeModel('gemini-2.5-flash')
-            
-            response = model.generate_content([
-                prompt,
-                {
-                    "mime_type": "application/pdf",
-                    "data": file_bytes
-                }
-            ])
-            text = response.text.strip()
-        else:
-            base64_image = base64.b64encode(file_bytes).decode('utf-8')
-            response = client.chat.completions.create(
-                model="meta-llama/llama-4-scout-17b-16e-instruct",
-                messages=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {"type": "text", "text": prompt},
-                            {
-                                "type": "image_url",
-                                "image_url": {
-                                    "url": f"data:{mime_type};base64,{base64_image}"
-                                }
-                            }
-                        ]
-                    }
-                ],
-                temperature=0.2,
-                max_tokens=1500
-            )
-            text = response.choices[0].message.content.strip()
+        import google.generativeai as genai
+        genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
+        model = genai.GenerativeModel('gemini-2.5-flash')
+        
+        response = model.generate_content([
+            prompt,
+            {
+                "mime_type": mime_type,
+                "data": file_bytes
+            }
+        ])
+        text = response.text.strip()
         
         # Try to find JSON block using regex if the model is chatty
         import re
