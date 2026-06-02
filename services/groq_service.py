@@ -414,70 +414,48 @@ async def extract_menu_from_image(file_bytes: bytes, mime_type: str = "image/jpe
             except Exception as e:
                 print(f"PDF conversion skipped/failed: {e}")
 
-        # 2. Extract raw text using Google Cloud Vision API
-        import requests
         import base64
-        vision_api_key = os.environ.get("GOOGLE_VISION_API_KEY")
-        if not vision_api_key:
-            # Fallback to a default if user forgets (though they should add it)
-            raise ValueError("GOOGLE_VISION_API_KEY environment variable is not set")
-
         b64_image = base64.b64encode(file_bytes).decode('utf-8')
-        vision_url = f"https://vision.googleapis.com/v1/images:annotate?key={vision_api_key}"
-        vision_payload = {
-            "requests": [
-                {
-                    "image": {"content": b64_image},
-                    "features": [{"type": "DOCUMENT_TEXT_DETECTION"}]
-                }
-            ]
+        
+        prompt = """Extract all menu items and return ONLY this JSON, no markdown:
+{
+  "highlightDishes": "string",
+  "signatureDish": "string",
+  "menuCategories": [
+    {
+      "category": "string",
+      "items": [
+        {
+          "id": 1,
+          "name": "string",
+          "emoji": "🍔",
+          "price": "string or null"
         }
-        
-        vision_res = requests.post(vision_url, json=vision_payload)
-        if vision_res.status_code != 200:
-            error_details = vision_res.text
-            raise ValueError(f"Google Vision API Error ({vision_res.status_code}): {error_details}")
-        
-        vision_data = vision_res.json()
-        
-        try:
-            ocr_text = vision_data['responses'][0]['fullTextAnnotation']['text']
-        except (KeyError, IndexError):
-            ocr_text = ""
-            
-        if not ocr_text.strip():
-            raise ValueError("No text extracted from the menu image")
-
-        # 3. Parse OCR text using Groq LLM
-        prompt = f"""You are a restaurant menu extraction specialist. Given OCR text from a menu, return ONLY a valid JSON object matching this EXACT structure:
-{{
-    "highlightDishes": "Dish1\\nDish2\\nDish3\\nDish4",
-    "signatureDish": "Best Dish",
-    "menuCategories": [
-    {{
-        "category": "Category Name",
-        "items": [
-        {{ "id": 1, "name": "Item Name", "emoji": "🍔", "price": "₹200" }}
-        ]
-    }}
-    ]
-}}
-
-Rules: 
-- 'highlightDishes' should be a string of 3-4 popular dishes separated by newlines.
-- 'signatureDish' should be one standout dish.
-- 'menuCategories' groups items by their category (e.g., Starters, Mains).
-- Ensure all 'id' fields are unique integers across the entire menu.
-- Generate appropriate emojis for each dish.
-- Return ONLY valid JSON, no markdown, no explanation. 
-- Clean OCR errors. Never return empty menuCategories.
-
-OCR Text:
-{ocr_text}"""
+      ]
+    }
+  ]
+}
+Rules: ONLY JSON, no code blocks, clean item names, keep currency symbols, never empty menuCategories."""
 
         response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[{"role": "user", "content": prompt}],
+            model="meta-llama/llama-4-scout-17b-16e-instruct",
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{b64_image}"
+                            }
+                        },
+                        {
+                            "type": "text",
+                            "text": prompt
+                        }
+                    ]
+                }
+            ],
             temperature=0.1,
             max_tokens=2500
         )
