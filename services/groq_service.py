@@ -434,7 +434,10 @@ async def extract_menu_from_image(file_bytes: bytes, mime_type: str = "image/jpe
         }
         
         vision_res = requests.post(vision_url, json=vision_payload)
-        vision_res.raise_for_status()
+        if vision_res.status_code != 200:
+            error_details = vision_res.text
+            raise ValueError(f"Google Vision API Error ({vision_res.status_code}): {error_details}")
+        
         vision_data = vision_res.json()
         
         try:
