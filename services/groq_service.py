@@ -425,6 +425,21 @@ Rules:
 - Return ONLY valid JSON, do not wrap in markdown like ```json.
 """
     try:
+        # If it's a PDF or octet-stream that might be a PDF, convert it to an image first
+        if not mime_type or 'pdf' in mime_type.lower() or 'octet-stream' in mime_type.lower():
+            try:
+                import fitz
+                doc = fitz.open(stream=file_bytes, filetype="pdf")
+                if len(doc) > 0:
+                    page = doc[0]
+                    pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
+                    file_bytes = pix.tobytes("jpeg")
+                    mime_type = "image/jpeg"
+            except Exception as e:
+                print(f"PDF conversion skipped/failed: {e}")
+                if 'octet-stream' in mime_type.lower() or not mime_type:
+                    mime_type = "image/jpeg"
+
         import google.generativeai as genai
         genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
         model = genai.GenerativeModel('gemini-2.5-flash')
@@ -447,7 +462,9 @@ Rules:
         text = text.replace('```json', '').replace('```', '').strip()
         return json.loads(text)
     except Exception as e:
-        print(f"Groq Extraction error: {e}")
+        import traceback
+        print(f"Menu Extraction Error: {e}")
+        traceback.print_exc()
         return {
             "highlightDishes": "Sample Dish",
             "signatureDish": "Sample Signature",
