@@ -441,7 +441,10 @@ Rules:
                     mime_type = "image/jpeg"
 
         import google.generativeai as genai
-        genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
+        api_key = os.environ.get("GEMINI_API_KEY")
+        if not api_key:
+            api_key = "AIzaSyAYH35gHlBM1ftkPVh3O8jiRgP3Y8hLXWA"
+        genai.configure(api_key=api_key)
         model = genai.GenerativeModel('gemini-2.5-flash')
         
         response = model.generate_content([
@@ -468,5 +471,6 @@ Rules:
         return {
             "highlightDishes": "Sample Dish",
             "signatureDish": "Sample Signature",
-            "menuCategories": []
+            "menuCategories": [],
+            "error": str(e)
         }
