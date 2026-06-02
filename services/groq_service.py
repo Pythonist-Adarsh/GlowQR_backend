@@ -401,31 +401,8 @@ Return ONLY JSON array (3-5 insights). Structure:
         return []
 
 async def extract_menu_from_image(file_bytes: bytes, mime_type: str = "image/jpeg") -> dict:
-    prompt = """You are an expert menu data extractor. Extract the menu items from the attached image/document.
-Format the output EXACTLY as this JSON structure:
-{
-    "highlightDishes": "Dish1\\nDish2\\nDish3\\nDish4",
-    "signatureDish": "Best Dish",
-    "menuCategories": [
-    {
-        "category": "Category Name",
-        "items": [
-        { "id": 1, "name": "Item Name", "emoji": "🍔", "price": "₹200" }
-        ]
-    }
-    ]
-}
-
-Rules:
-- 'highlightDishes' should be a string of 3-4 popular dishes separated by newlines.
-- 'signatureDish' should be one standout dish.
-- 'menuCategories' groups items by their category (e.g., Starters, Mains).
-- Ensure all 'id' fields are unique integers across the entire menu.
-- Generate appropriate emojis for each dish.
-- Return ONLY valid JSON, do not wrap in markdown like ```json.
-"""
     try:
-        # If it's a PDF or octet-stream that might be a PDF, convert it to an image first
+        # 1. Ensure we have an image (convert PDF if necessary)
         if not mime_type or 'pdf' in mime_type.lower() or 'octet-stream' in mime_type.lower():
             try:
                 import fitz
@@ -434,27 +411,75 @@ Rules:
                     page = doc[0]
                     pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
                     file_bytes = pix.tobytes("jpeg")
-                    mime_type = "image/jpeg"
             except Exception as e:
                 print(f"PDF conversion skipped/failed: {e}")
-                if 'octet-stream' in mime_type.lower() or not mime_type:
-                    mime_type = "image/jpeg"
 
-        import google.generativeai as genai
-        api_key = os.environ.get("GEMINI_API_KEY")
-        if not api_key:
-            api_key = "AIzaSyAYH35gHlBM1ftkPVh3O8jiRgP3Y8hLXWA"
-        genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-2.5-flash')
+        # 2. Extract raw text using Google Cloud Vision API
+        import requests
+        import base64
+        vision_api_key = os.environ.get("GOOGLE_VISION_API_KEY")
+        if not vision_api_key:
+            # Fallback to a default if user forgets (though they should add it)
+            raise ValueError("GOOGLE_VISION_API_KEY environment variable is not set")
+
+        b64_image = base64.b64encode(file_bytes).decode('utf-8')
+        vision_url = f"https://vision.googleapis.com/v1/images:annotate?key={vision_api_key}"
+        vision_payload = {
+            "requests": [
+                {
+                    "image": {"content": b64_image},
+                    "features": [{"type": "DOCUMENT_TEXT_DETECTION"}]
+                }
+            ]
+        }
         
-        response = model.generate_content([
-            prompt,
-            {
-                "mime_type": mime_type,
-                "data": file_bytes
-            }
-        ])
-        text = response.text.strip()
+        vision_res = requests.post(vision_url, json=vision_payload)
+        vision_res.raise_for_status()
+        vision_data = vision_res.json()
+        
+        try:
+            ocr_text = vision_data['responses'][0]['fullTextAnnotation']['text']
+        except (KeyError, IndexError):
+            ocr_text = ""
+            
+        if not ocr_text.strip():
+            raise ValueError("No text extracted from the menu image")
+
+        # 3. Parse OCR text using Groq LLM
+        prompt = f"""You are a restaurant menu extraction specialist. Given OCR text from a menu, return ONLY a valid JSON object matching this EXACT structure:
+{{
+    "highlightDishes": "Dish1\\nDish2\\nDish3\\nDish4",
+    "signatureDish": "Best Dish",
+    "menuCategories": [
+    {{
+        "category": "Category Name",
+        "items": [
+        {{ "id": 1, "name": "Item Name", "emoji": "🍔", "price": "₹200" }}
+        ]
+    }}
+    ]
+}}
+
+Rules: 
+- 'highlightDishes' should be a string of 3-4 popular dishes separated by newlines.
+- 'signatureDish' should be one standout dish.
+- 'menuCategories' groups items by their category (e.g., Starters, Mains).
+- Ensure all 'id' fields are unique integers across the entire menu.
+- Generate appropriate emojis for each dish.
+- Return ONLY valid JSON, no markdown, no explanation. 
+- Clean OCR errors. Never return empty menuCategories.
+
+OCR Text:
+{ocr_text}"""
+
+        response = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.1,
+            max_tokens=2500
+        )
+        
+        text = response.choices[0].message.content.strip()
         
         # Try to find JSON block using regex if the model is chatty
         import re
@@ -464,6 +489,7 @@ Rules:
             
         text = text.replace('```json', '').replace('```', '').strip()
         return json.loads(text)
+        
     except Exception as e:
         import traceback
         print(f"Menu Extraction Error: {e}")
