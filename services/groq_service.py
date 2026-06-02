@@ -426,22 +426,18 @@ Rules:
 """
     try:
         if mime_type == "application/pdf":
-            import fitz
-            doc = fitz.open(stream=file_bytes, filetype="pdf")
-            text_content = ""
-            for page in doc:
-                text_content += page.get_text() + "\n"
+            import google.generativeai as genai
+            genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
+            model = genai.GenerativeModel('gemini-2.5-flash')
             
-            response = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=[
-                    {"role": "system", "content": prompt},
-                    {"role": "user", "content": f"Here is the text extracted from the menu PDF:\n\n{text_content}"}
-                ],
-                temperature=0.2,
-                max_tokens=1500,
-                response_format={"type": "json_object"}
-            )
+            response = model.generate_content([
+                prompt,
+                {
+                    "mime_type": "application/pdf",
+                    "data": file_bytes
+                }
+            ])
+            text = response.text.strip()
         else:
             base64_image = base64.b64encode(file_bytes).decode('utf-8')
             response = client.chat.completions.create(
@@ -463,8 +459,7 @@ Rules:
                 temperature=0.2,
                 max_tokens=1500
             )
-            
-        text = response.choices[0].message.content.strip()
+            text = response.choices[0].message.content.strip()
         
         # Try to find JSON block using regex if the model is chatty
         import re
