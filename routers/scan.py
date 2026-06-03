@@ -1,12 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks
 from sqlalchemy.orm import Session
 from database import get_db
 import models, schemas
 import secrets
 import hashlib
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from services.groq_service import generate_reviews
-from services.email_service import send_negative_feedback_alert
+from services.email_service import send_negative_feedback_alert, send_low_rating_alert_email
+from sqlalchemy import func
 
 router = APIRouter(tags=["Scan"])
 

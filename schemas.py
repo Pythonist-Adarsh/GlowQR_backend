@@ -231,3 +231,21 @@ class AdminUserPlanUpdate(BaseModel):
 
 class SubscriptionCreate(BaseModel):
     plan: str
+
+class AlertOwnerRequest(BaseModel):
+    qr_slug: str
+    session_id: Optional[str] = None
+    overall_rating: int
+    food_rating: Optional[int] = None
+    service_rating: Optional[int] = None
+    atmosphere_rating: Optional[int] = None
+    selected_items: Optional[List[str]] = None
+    meal_type: Optional[str] = None
+    price_range: Optional[str] = None
+    wait_time: Optional[str] = None
+    review_text_copied: Optional[str] = None
+
+class UpdateAlertRequest(BaseModel):
+    is_read: Optional[bool] = None
+    is_resolved: Optional[bool] = None
+

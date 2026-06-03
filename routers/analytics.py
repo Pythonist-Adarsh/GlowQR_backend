@@ -525,3 +525,139 @@ def send_weekly_summary(user: models.User = Depends(require_premium), db: Sessio
     # Implement email logic utilizing email_service.py
     # Here we simulate the email sending to satisfy the endpoint request
     return {"message": "Weekly summary email dispatched successfully."}
+
+@router.get("/api/analytics/negative-alerts")
+def get_negative_alerts(
+    unread_only: bool = False,
+    limit: int = 20,
+    offset: int = 0,
+    user: models.User = Depends(require_premium),
+    db: Session = Depends(get_db)
+):
+    business = get_business(user, db)
+    
+    query = db.query(models.NegativeFeedback).filter(models.NegativeFeedback.business_id == business.id)
+    if unread_only:
+        query = query.filter(models.NegativeFeedback.is_read == False)
+        
+    total = db.query(models.NegativeFeedback).filter(models.NegativeFeedback.business_id == business.id).count()
+    unread_count = db.query(models.NegativeFeedback).filter(
+        models.NegativeFeedback.business_id == business.id, 
+        models.NegativeFeedback.is_read == False
+    ).count()
+    
+    feedbacks = query.order_by(models.NegativeFeedback.created_at.desc()).offset(offset).limit(limit).all()
+    
+    alerts = []
+    for f in feedbacks:
+        se = f.scan_event
+        alerts.append({
+            "id": f.id,
+            "rating": f.rating,
+            "feedback_text": f.feedback_text,
+            "is_read": f.is_read,
+            "is_resolved": f.is_resolved,
+            "resolved_at": f.resolved_at,
+            "created_at": f.created_at,
+            "overall_rating": se.overall_rating if se else None,
+            "food_rating": se.food_rating if se else None,
+            "service_rating": se.service_rating if se else None,
+            "atmosphere_rating": se.atmosphere_rating if se else None,
+            "selected_items": se.selected_items if se else None,
+            "meal_type": se.meal_type if se else None,
+            "price_range": se.price_range if se else None,
+            "wait_time": se.wait_time if se else None,
+            "visit_time": se.scanned_at if se else f.created_at
+        })
+        
+    return {
+        "alerts": alerts,
+        "total": total,
+        "unread_count": unread_count
+    }
+
+@router.patch("/api/analytics/negative-alerts/{alert_id}")
+def update_alert(
+    alert_id: int,
+    body: schemas.UpdateAlertRequest,
+    user: models.User = Depends(require_premium),
+    db: Session = Depends(get_db)
+):
+    business = get_business(user, db)
+    alert = db.query(models.NegativeFeedback).filter(
+        models.NegativeFeedback.id == alert_id,
+        models.NegativeFeedback.business_id == business.id
+    ).first()
+    
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alert not found")
+        
+    if body.is_read is not None:
+        alert.is_read = body.is_read
+    if body.is_resolved is not None:
+        alert.is_resolved = body.is_resolved
+        if body.is_resolved:
+            from datetime import datetime, timezone
+            alert.resolved_at = datetime.now(timezone.utc)
+            
+    db.commit()
+    db.refresh(alert)
+    return {"status": "ok"}
+
+@router.get("/api/analytics/improvement-tracker")
+def get_improvement_tracker(
+    user: models.User = Depends(require_premium),
+    db: Session = Depends(get_db)
+):
+    business = get_business(user, db)
+    
+    resolved = db.query(models.NegativeFeedback).filter(
+        models.NegativeFeedback.business_id == business.id,
+        models.NegativeFeedback.is_resolved == True,
+        models.NegativeFeedback.resolved_at != None
+    ).order_by(models.NegativeFeedback.resolved_at.desc()).limit(10).all()
+    
+    tracker = []
+    from datetime import timedelta
+    for event in resolved:
+        resolved_at = event.resolved_at
+        
+        before_stats = db.query(
+            func.avg(models.ScanEvent.overall_rating).label("avg_rating"),
+            func.count(models.ScanEvent.id).label("scan_count")
+        ).filter(
+            models.ScanEvent.business_id == business.id,
+            models.ScanEvent.scanned_at >= resolved_at - timedelta(days=30),
+            models.ScanEvent.scanned_at <= resolved_at,
+            models.ScanEvent.overall_rating != None
+        ).first()
+        
+        after_stats = db.query(
+            func.avg(models.ScanEvent.overall_rating).label("avg_rating"),
+            func.count(models.ScanEvent.id).label("scan_count")
+        ).filter(
+            models.ScanEvent.business_id == business.id,
+            models.ScanEvent.scanned_at >= resolved_at,
+            models.ScanEvent.scanned_at <= resolved_at + timedelta(days=30),
+            models.ScanEvent.overall_rating != None
+        ).first()
+        
+        scan_count_before = before_stats.scan_count if before_stats else 0
+        scan_count_after = after_stats.scan_count if after_stats else 0
+        
+        if scan_count_before >= 3:
+            avg_before = float(before_stats.avg_rating) if before_stats and before_stats.avg_rating else 0.0
+            avg_after = float(after_stats.avg_rating) if after_stats and after_stats.avg_rating else 0.0
+            improvement = avg_after - avg_before
+            tracker.append({
+                "resolved_at": resolved_at,
+                "rating_before": round(avg_before, 1),
+                "rating_after": round(avg_after, 1),
+                "improvement": round(improvement, 1),
+                "scans_before": scan_count_before,
+                "scans_after": scan_count_after,
+                "improved": improvement > 0
+            })
+            
+    return {"tracker": tracker}
+
