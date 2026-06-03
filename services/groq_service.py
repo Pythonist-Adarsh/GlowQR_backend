@@ -341,6 +341,13 @@ async def generate_reviews(
             max_tokens=cfg['max_tokens']
         )
         text = response.choices[0].message.content.strip()
+        
+        # Try to extract JSON using regex
+        import re
+        match = re.search(r'\{.*\}', text, re.DOTALL)
+        if match:
+            text = match.group(0)
+            
         text = text.replace('```json', '').replace('```', '').strip()
         try:
             parsed = json.loads(text)
