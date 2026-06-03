@@ -244,19 +244,10 @@ class AlertOwnerRequest(BaseModel):
     price_range: Optional[str] = None
     wait_time: Optional[str] = None
     review_text_copied: Optional[str] = None
+    review_text: Optional[str] = None
+    action_tip: Optional[str] = None
+    weak_category: Optional[str] = None
 
 class UpdateAlertRequest(BaseModel):
     is_read: Optional[bool] = None
     is_resolved: Optional[bool] = None
-
-
-class AlertOwnerRequest(BaseModel):
-    qr_slug: str
-    session_id: str
-    rating: int
-    weak_category: Optional[str] = None
-    action_tip: str
-    review_text: str
-    meal_type: Optional[str] = None
-    price_range: Optional[str] = None
-    wait_time: Optional[str] = None

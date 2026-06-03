@@ -196,7 +196,7 @@ def alert_owner_endpoint(req: schemas.AlertOwnerRequest, background_tasks: Backg
     new_feedback = models.NegativeFeedback(
         business_id=business.id,
         scan_event_id=scan_id,
-        rating=req.rating,
+        rating=req.overall_rating,
         feedback_text=req.review_text
     )
     db.add(new_feedback)
@@ -210,7 +210,7 @@ def alert_owner_endpoint(req: schemas.AlertOwnerRequest, background_tasks: Backg
             business.owner_email,
             business.name,
             business.google_review_url or "",
-            req.rating,
+            req.overall_rating,
             [],
             req.meal_type or "",
             req.price_range or "",
