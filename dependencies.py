@@ -31,7 +31,7 @@ async def get_current_user(authorization: str = Header(...), db: Session = Depen
     return user
 
 def require_basic(current_user: User = Depends(get_current_user)):
-    if current_user.plan not in ['basic', 'premium']:
+    if current_user.plan not in ['trial', 'basic', 'premium']:
         raise HTTPException(
             status_code=403,
             detail={
