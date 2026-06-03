@@ -195,6 +195,54 @@ def google_score(user: models.User = Depends(require_basic), db: Session = Depen
         "gap_percentage": gap_percentage
     }
 
+@router.get("/summary")
+def get_summary(user: models.User = Depends(require_basic), db: Session = Depends(get_db)):
+    business = get_business(user, db)
+    
+    total = db.query(models.ScanEvent).filter(models.ScanEvent.business_id == business.id).count()
+    redirects = db.query(models.ScanEvent).filter(
+        models.ScanEvent.business_id == business.id, 
+        models.ScanEvent.redirected_to_google == True
+    ).count()
+    
+    conv_rate = (redirects / total * 100) if total > 0 else 0
+    
+    avg_rating = db.query(func.avg(models.ScanEvent.overall_rating)).filter(
+        models.ScanEvent.business_id == business.id,
+        models.ScanEvent.overall_rating != None
+    ).scalar() or 0
+    
+    now = datetime.now(timezone.utc)
+    start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    
+    reviews_this_month = db.query(models.ScanEvent).filter(
+        models.ScanEvent.business_id == business.id,
+        models.ScanEvent.scanned_at >= start_of_month,
+        models.ScanEvent.overall_rating != None
+    ).count()
+    
+    ratings = db.query(
+        models.ScanEvent.overall_rating, 
+        func.count(models.ScanEvent.id)
+    ).filter(
+        models.ScanEvent.business_id == business.id,
+        models.ScanEvent.overall_rating != None
+    ).group_by(models.ScanEvent.overall_rating).all()
+    
+    ratings_split = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0}
+    for rating, count in ratings:
+        if rating in ratings_split:
+            ratings_split[rating] = count
+            
+    return {
+        "total_scans": total,
+        "total_redirects": redirects,
+        "conversion_rate": round(conv_rate, 1),
+        "google_rating": round(avg_rating, 1),
+        "reviews_this_month": reviews_this_month,
+        "ratings_split": ratings_split
+    }
+
 @router.get("/monthly-report")
 def monthly_report(user: models.User = Depends(require_basic), db: Session = Depends(get_db)):
     business = get_business(user, db)

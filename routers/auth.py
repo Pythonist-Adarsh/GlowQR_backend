@@ -124,16 +124,10 @@ def get_me(db: Session = Depends(get_db), current_user: models.User = Depends(ge
     ).order_by(models.Subscription.created_at.desc()).first()
 
     if current_user.plan in ['basic', 'premium']:
-        if sub and sub.status == 'active' and sub.current_period_end:
-            # Handle naive SQLite datetimes by treating them as UTC
-            end_date = sub.current_period_end
-            if end_date.tzinfo is None:
-                end_date = end_date.replace(tzinfo=timezone.utc)
-                
-            if end_date < datetime.now(timezone.utc):
-                current_user.plan = 'expired'
-                sub.status = 'completed'
-                db.commit()
+        if sub and sub.status == 'active' and sub.current_period_end < datetime.now(timezone.utc):
+            current_user.plan = 'expired'
+            sub.status = 'completed'
+            db.commit()
 
     business = db.query(models.Business).filter(models.Business.owner_id == current_user.id).first()
     
