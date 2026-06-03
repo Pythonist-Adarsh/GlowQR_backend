@@ -419,7 +419,7 @@ def revenue_impact(user: models.User = Depends(require_premium), db: Session = D
     influence_rate = 0.68
     estimated_new_customers = int(new_reviews * influence_rate * 10) # Multiplier for realism
     estimated_revenue = estimated_new_customers * avg_customer_value
-    roi = round(estimated_revenue / 699, 1) if estimated_revenue > 0 else 0
+    roi = round(estimated_revenue / 499, 1) if estimated_revenue > 0 else 0
     
     return {
         "newReviews": new_reviews,
@@ -427,7 +427,7 @@ def revenue_impact(user: models.User = Depends(require_premium), db: Session = D
         "estimatedCustomers": estimated_new_customers,
         "estimatedRevenue": estimated_revenue,
         "roi": roi,
-        "planCost": 699
+        "planCost": 499
     }
 
 @router.get("/staff-performance")

@@ -320,7 +320,7 @@ def get_revenue_data(db: Session = Depends(get_db), verified: bool = Depends(ver
             "this_month": this_month / 100,
             "last_month": last_month / 100,
             "all_time": all_time / 100,
-            "mrr": (basic_count * 299) + (premium_count * 699),
+            "mrr": (basic_count * 199) + (premium_count * 499),
             "basic_count": basic_count,
             "premium_count": premium_count
         },

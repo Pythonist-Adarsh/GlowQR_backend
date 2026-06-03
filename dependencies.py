@@ -37,7 +37,7 @@ def require_basic(current_user: User = Depends(get_current_user)):
             detail={
                 "error": "plan_required",
                 "required_plan": "basic",
-                "message": "Upgrade to Basic ₹299/month to access this feature",
+                "message": "Upgrade to Basic ₹199/month to access this feature",
                 "upgrade_url": "/dashboard/subscription"
             }
         )
@@ -50,7 +50,7 @@ def require_premium(current_user: User = Depends(get_current_user)):
             detail={
                 "error": "plan_required", 
                 "required_plan": "premium",
-                "message": "Upgrade to Premium ₹699/month to access this feature",
+                "message": "Upgrade to Premium ₹499/month to access this feature",
                 "upgrade_url": "/dashboard/subscription"
             }
         )
