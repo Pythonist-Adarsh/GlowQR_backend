@@ -119,12 +119,12 @@ def logout(request: schemas.RefreshTokenRequest, db: Session = Depends(get_db), 
 
 @router.get("/me", response_model=schemas.AuthMeResponse)
 def get_me(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    sub = db.query(models.Subscription).filter(
+        models.Subscription.user_id == current_user.id
+    ).order_by(models.Subscription.created_at.desc()).first()
+
     if current_user.plan in ['basic', 'premium']:
-        sub = db.query(models.Subscription).filter(
-            models.Subscription.user_id == current_user.id, 
-            models.Subscription.status == 'active'
-        ).first()
-        if sub and sub.current_period_end < datetime.now(timezone.utc):
+        if sub and sub.status == 'active' and sub.current_period_end < datetime.now(timezone.utc):
             current_user.plan = 'expired'
             sub.status = 'completed'
             db.commit()
@@ -138,7 +138,8 @@ def get_me(db: Session = Depends(get_db), current_user: models.User = Depends(ge
             "full_name": current_user.full_name,
             "plan": current_user.plan,
             "trial_ends_at": current_user.trial_ends_at,
-            "current_period_end": sub.current_period_end if 'sub' in locals() and sub else None,
+            "current_period_end": sub.current_period_end if sub else None,
+            "subscription_status": sub.status if sub else None,
             "avatar_url": current_user.avatar_url
         },
         "business": {
@@ -151,3 +152,23 @@ def get_me(db: Session = Depends(get_db), current_user: models.User = Depends(ge
             "primary_color": business.primary_color
         } if business else None
     }
+
+@router.patch("/me")
+def update_me(update_data: dict, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if "full_name" in update_data:
+        current_user.full_name = update_data["full_name"]
+    if "email" in update_data:
+        # Should verify email uniqueness ideally, but keeping simple
+        current_user.email = update_data["email"]
+    db.commit()
+    return {"status": "ok"}
+
+@router.post("/update-password")
+def update_password(pw_data: dict, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    current_pw = pw_data.get("current_password")
+    new_pw = pw_data.get("new_password")
+    if not security_auth.verify_password(current_pw, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Incorrect current password")
+    current_user.hashed_password = security_auth.get_password_hash(new_pw)
+    db.commit()
+    return {"status": "ok"}

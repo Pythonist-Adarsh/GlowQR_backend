@@ -45,7 +45,7 @@ def send_qr_is_live(business_name: str, owner_email: str, scan_url: str):
 
 def send_negative_feedback_alert(business_name: str, owner_email: str, rating: int, feedback_text: str):
     resend.Emails.send({
-        "from": "GlowQR <onboarding@resend.dev>",
+        "from": "GlowQR Admin <onboarding@resend.dev>",
         "to": [owner_email],
         "subject": f"âš ï¸� New negative feedback â€” {business_name}",
         "html": f"""
@@ -251,11 +251,10 @@ async def send_low_rating_alert_email(
     
     try:
         resend.Emails.send({
-            "from": "GlowQR Alerts <onboarding@resend.dev>",
+            "from": "GlowQR Admin <onboarding@resend.dev>",
             "to": [owner_email],
-            "subject": f"?? {rating}? Review just posted — {business_name}",
+            "subject": f"🚨 {rating}★ Review just posted – {business_name}",
             "html": html_body
         })
     except Exception as e:
         print(f"Error sending email: {e}")
-

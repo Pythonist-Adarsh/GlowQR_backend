@@ -177,3 +177,48 @@ def submit_feedback(feedback: schemas.FeedbackSubmitCreate, db: Session = Depend
             print(f"Failed to send alert email: {e}")
             
     return {"message": "Thank you for your feedback"}
+
+@router.post("/api/scan/alert-owner")
+def alert_owner_endpoint(req: schemas.AlertOwnerRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    qr_code = db.query(models.QRCode).filter(models.QRCode.slug == req.qr_slug).first()
+    if not qr_code:
+        return {"status": "ignored"}
+    business = db.query(models.Business).filter(models.Business.id == qr_code.business_id).first()
+    if not business:
+        return {"status": "ignored"}
+    
+    scan_id = None
+    scan = db.query(models.ScanEvent).filter(models.ScanEvent.session_id == req.session_id).first()
+    if scan:
+        scan_id = scan.id
+        scan.was_negative = True
+
+    new_feedback = models.NegativeFeedback(
+        business_id=business.id,
+        scan_event_id=scan_id,
+        rating=req.rating,
+        feedback_text=req.review_text
+    )
+    db.add(new_feedback)
+    db.commit()
+
+    if business.owner_email:
+        from services.email_service import send_low_rating_alert_email
+        pattern_dict = {"total_count": 1, "last_seen": None}
+        background_tasks.add_task(
+            send_low_rating_alert_email,
+            business.owner_email,
+            business.name,
+            business.google_review_url or "",
+            req.rating,
+            [],
+            req.meal_type or "",
+            req.price_range or "",
+            req.wait_time or "",
+            req.review_text,
+            [(req.weak_category, 1)] if req.weak_category else [],
+            pattern_dict,
+            req.action_tip,
+            datetime.now(timezone.utc)
+        )
+    return {"status": "alert_queued"}
