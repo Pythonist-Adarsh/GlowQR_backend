@@ -30,20 +30,28 @@ async def get_current_user(authorization: str = Header(...), db: Session = Depen
     
     return user
 
-def plan_gate(required_plan: str):
-    plan_hierarchy = {"expired": 0, "basic": 1, "premium": 2, "trial": 3}
-    required = {"basic": 1, "premium": 2}
-    
-    async def check(current_user: User = Depends(get_current_user)):
-        if plan_hierarchy.get(current_user.plan, 0) >= required.get(required_plan, 0):
-            return current_user
+def require_basic(current_user: User = Depends(get_current_user)):
+    if current_user.plan not in ['basic', 'premium']:
         raise HTTPException(
             status_code=403,
             detail={
                 "error": "plan_required",
-                "required_plan": required_plan,
-                "current_plan": current_user.plan,
-                "upgrade_url": "/upgrade"
+                "required_plan": "basic",
+                "message": "Upgrade to Basic ₹299/month to access this feature",
+                "upgrade_url": "/dashboard/subscription"
             }
         )
-    return check
+    return current_user
+
+def require_premium(current_user: User = Depends(get_current_user)):
+    if current_user.plan != 'premium':
+        raise HTTPException(
+            status_code=403,
+            detail={
+                "error": "plan_required", 
+                "required_plan": "premium",
+                "message": "Upgrade to Premium ₹699/month to access this feature",
+                "upgrade_url": "/dashboard/subscription"
+            }
+        )
+    return current_user

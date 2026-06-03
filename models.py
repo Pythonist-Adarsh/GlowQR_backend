@@ -158,6 +158,7 @@ class ScanEvent(Base):
     
     device_type = Column(String, nullable=True)
     user_agent = Column(String, nullable=True)
+    review_language = Column(String, nullable=True, default='english')
     ip_hash = Column(String, nullable=True)
     
     # Extracted by generated columns ideally, or manually populated via db triggers / python logic
@@ -280,4 +281,15 @@ class AdminSettings(Base):
     admin_email = Column(String, nullable=True)
     admin_password_hash = Column(String, nullable=True)
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+class AIAnalyticsCache(Base):
+    __tablename__ = "ai_analytics_cache"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    business_id = Column(Integer, ForeignKey("businesses.id", ondelete="CASCADE"), unique=True)
+    insights_data = Column(JSON) # { "problems": [], "strengths": [] }
+    sentiment_data = Column(JSON, nullable=True) # { "positive_words": [], "negative_words": [] }
+    generated_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    business = relationship("Business")
 
