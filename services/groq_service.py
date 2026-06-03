@@ -232,28 +232,49 @@ Include {business_data.get('signature_dish') or (selected_items[0] if selected_i
 Return ONLY a JSON object with a 'reviews' array containing EXACTLY 5 strings. Like this: {{"reviews": ["rev1", "rev2", "rev3", "rev4", "rev5"]}}
 """
 
-def get_fallback_review(business_data: dict, rating: int, language: str) -> str:
+def get_fallback_review(business_data: dict, rating: int, language: str, index: int = 0) -> str:
     name = business_data.get('name', 'this place')
     fallbacks = {
         5: {
-            'english': f"Really enjoyed my time at {name}. Food and service both were good. Will be back.",
-            'hindi': f"{name} mein khana bahut acha tha. Service bhi theek rahi. Dobara zaroor aayenge.",
-            'hinglish': f"Sach mein, {name} ne disappoint nahi kiya. Khana solid tha. Recommend karunga."
+            'english': [
+                f"Really enjoyed my time at {name}. Food and service both were good. Will be back.",
+                f"Had a great experience at {name}. Everything was top-notch.",
+                f"Loved the vibe and food at {name}. Highly recommend checking it out.",
+                f"Amazing place! {name} really delivered on quality and taste.",
+                f"Cannot say enough good things about {name}. A wonderful visit!"
+            ],
+            'hindi': [f"{name} mein khana bahut acha tha. Service bhi theek rahi. Dobara zaroor aayenge."] * 5,
+            'hinglish': [f"Sach mein, {name} ne disappoint nahi kiya. Khana solid tha. Recommend karunga."] * 5
         },
         4: {
-            'english': f"Good experience at {name}. Food was well made. Minor things could improve but overall satisfied.",
-            'hindi': f"{name} mein experience kaafi theek raha. Khana acha tha. Kuch cheezein aur better ho sakti hain.",
-            'hinglish': f"{name} mein khana decent tha. Service thodi slow thi but overall theek raha."
+            'english': [
+                f"Good experience at {name}. Food was well made. Minor things could improve but overall satisfied.",
+                f"Visited {name} recently. The food was tasty, though service was slightly slow.",
+                f"Nice ambiance at {name}. Most of what we tried was pretty good.",
+                f"A solid choice for dining out. {name} has good portions and fair prices.",
+                f"Enjoyed the meal at {name}. Would visit again when in the area."
+            ],
+            'hindi': [f"{name} mein experience kaafi theek raha. Khana acha tha. Kuch cheezein aur better ho sakti hain."] * 5,
+            'hinglish': [f"{name} mein khana decent tha. Service thodi slow thi but overall theek raha."] * 5
         },
         3: {
-            'english': f"Mixed experience at {name}. Some things were good, others need work.",
-            'hindi': f"{name} mein kuch cheezein achi thi, kuch nahi. Average experience raha.",
-            'hinglish': f"{name} okay tha. Na bahut acha, na bahut bura. Try kar sakte ho."
+            'english': [
+                f"Mixed experience at {name}. Some things were good, others need work.",
+                f"Average visit to {name}. Food was okay but nothing spectacular.",
+                f"{name} is decent if you're nearby, but don't expect anything extraordinary.",
+                f"Service at {name} was fine, but the taste could definitely be improved.",
+                f"Overall an okay experience at {name}. Might give it another try later."
+            ],
+            'hindi': [f"{name} mein kuch cheezein achi thi, kuch nahi. Average experience raha."] * 5,
+            'hinglish': [f"{name} okay tha. Na bahut acha, na bahut bura. Try kar sakte ho."] * 5
         }
     }
+    
     rating_key = 5 if rating >= 5 else (4 if rating >= 4 else 3)
     lang_key = language.lower() if language.lower() in fallbacks[rating_key] else 'english'
-    return fallbacks[rating_key][lang_key]
+    
+    options = fallbacks[rating_key][lang_key]
+    return options[index % len(options)]
 
 async def generate_reviews(
     business_name: str,
@@ -367,13 +388,13 @@ async def generate_reviews(
                 cleaned.append(v)
         
         while len(cleaned) < cfg['variants']:
-            cleaned.append(get_fallback_review(business_data, overall, language))
+            cleaned.append(get_fallback_review(business_data, overall, language, len(cleaned)))
             
         return cleaned[:cfg['variants']]
         
     except Exception as e:
         print(f"Groq error: {e}")
-        return [get_fallback_review(business_data, overall, language) for _ in range(cfg['variants'])]
+        return [get_fallback_review(business_data, overall, language, i) for i in range(cfg['variants'])]
 
 async def generate_business_insights(data: dict) -> list[dict]:
     prompt = f"""You are a business advisor for Indian local businesses. Be specific and data-driven.

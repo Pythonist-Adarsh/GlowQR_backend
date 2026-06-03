@@ -211,7 +211,7 @@ def alert_owner_endpoint(req: schemas.AlertOwnerRequest, background_tasks: Backg
             business.name,
             business.google_review_url or "",
             req.overall_rating,
-            [],
+            req.selected_items or [],
             req.meal_type or "",
             req.price_range or "",
             req.wait_time or "",
