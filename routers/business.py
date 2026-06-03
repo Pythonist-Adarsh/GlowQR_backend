@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Body
 from sqlalchemy.orm import Session
 from database import get_db
-from dependencies import get_current_user, plan_gate
+from dependencies import get_current_user
 import models, schemas
 import secrets
 import os
