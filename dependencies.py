@@ -44,7 +44,7 @@ def require_basic(current_user: User = Depends(get_current_user)):
     return current_user
 
 def require_premium(current_user: User = Depends(get_current_user)):
-    if current_user.plan != 'premium':
+    if current_user.plan not in ['trial', 'premium']:
         raise HTTPException(
             status_code=403,
             detail={
