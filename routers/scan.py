@@ -115,6 +115,7 @@ def record_scan(record: schemas.ScanRecordCreate, request: Request, db: Session 
         if record.review_text is not None: scan.review_text = record.review_text
         if record.was_negative is not None: scan.was_negative = record.was_negative
         if record.language is not None: scan.language = record.language
+        if record.redirected_to_google is not None: scan.redirected_to_google = record.redirected_to_google
         
         db.commit()
         return {"session_id": scan.session_id, "recorded": True}

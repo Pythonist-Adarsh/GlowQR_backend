@@ -314,6 +314,10 @@ def ai_insights(user: models.User = Depends(require_premium), db: Session = Depe
     cache = db.query(models.AIAnalyticsCache).filter(models.AIAnalyticsCache.business_id == business.id).first()
     if cache and cache.generated_at > datetime.now(timezone.utc) - timedelta(hours=24):
         if cache.insights_data:
+            # Inject recent reviews into cached data
+            scans = db.query(models.ScanEvent).filter(models.ScanEvent.business_id == business.id).order_by(models.ScanEvent.scanned_at.desc()).limit(3).all()
+            recent_reviews = [{'rating': r.overall_rating, 'text': r.review_text} for r in scans if r.review_text]
+            cache.insights_data['recentReviews'] = recent_reviews
             return cache.insights_data
 
     # Generate new insights
@@ -389,6 +393,9 @@ Max 3 problems, max 2 strengths. Be specific, use the numbers provided."""
             text = match.group(0)
         
         parsed_data = json.loads(text)
+        
+        recent_reviews = [{'rating': r.overall_rating, 'text': r.review_text} for r in scans if r.review_text][:3]
+        parsed_data['recentReviews'] = recent_reviews
         
         # Save to cache
         if not cache:

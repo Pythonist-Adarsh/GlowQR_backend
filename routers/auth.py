@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Body
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, timezone
 import models, schemas, security as security_auth
@@ -154,7 +154,7 @@ def get_me(db: Session = Depends(get_db), current_user: models.User = Depends(ge
     }
 
 @router.patch("/me")
-def update_me(update_data: dict, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+def update_me(update_data: dict = Body(...), db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     if "full_name" in update_data:
         current_user.full_name = update_data["full_name"]
     if "email" in update_data:
@@ -164,7 +164,7 @@ def update_me(update_data: dict, db: Session = Depends(get_db), current_user: mo
     return {"status": "ok"}
 
 @router.post("/update-password")
-def update_password(pw_data: dict, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+def update_password(pw_data: dict = Body(...), db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     current_pw = pw_data.get("current_password")
     new_pw = pw_data.get("new_password")
     if not security_auth.verify_password(current_pw, current_user.hashed_password):
