@@ -677,7 +677,7 @@ def send_weekly_summary(user: models.User = Depends(require_premium), db: Sessio
     
     return {"message": "Weekly summary email dispatched successfully."}
 
-@router.get("/api/analytics/negative-alerts")
+@router.get("/negative-alerts")
 def get_negative_alerts(
     unread_only: bool = False,
     limit: int = 20,
@@ -728,7 +728,7 @@ def get_negative_alerts(
         "unread_count": unread_count
     }
 
-@router.patch("/api/analytics/negative-alerts/{alert_id}")
+@router.patch("/negative-alerts/{alert_id}")
 def update_alert(
     alert_id: int,
     body: schemas.UpdateAlertRequest,
@@ -754,9 +754,13 @@ def update_alert(
             
     db.commit()
     db.refresh(alert)
-    return {"status": "ok"}
+    return {"message": "Alert updated successfully", "alert": {
+        "id": alert.id,
+        "is_read": alert.is_read,
+        "is_resolved": alert.is_resolved
+    }}
 
-@router.get("/api/analytics/improvement-tracker")
+@router.get("/improvement-tracker")
 def get_improvement_tracker(
     user: models.User = Depends(require_premium),
     db: Session = Depends(get_db)
