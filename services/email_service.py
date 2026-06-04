@@ -1,4 +1,4 @@
-﻿import resend
+import resend
 import os
 
 resend.api_key = os.environ.get("RESEND_API_KEY")
@@ -112,7 +112,7 @@ async def send_low_rating_alert_email(
     action_tip: str,
     visit_time: datetime
 ):
-    stars_display = "?" * rating + "?" * (5 - rating)
+    stars_display = "★" * rating + "☆" * (5 - rating)
     visit_time_str = visit_time.strftime("%d %b %Y, %I:%M %p") + " IST"
     items_str = ", ".join(selected_items) if selected_items else "Not specified"
     
@@ -125,7 +125,7 @@ async def send_low_rating_alert_email(
         <div style="background:#FFF7ED;border-left:3px solid #F59E0B;
                     padding:12px 16px;border-radius:0 8px 8px 0;margin:16px 0">
           <p style="margin:0 0 4px;font-size:13px;font-weight:600;color:#92400E">
-            ?? Pattern detected
+            ⚠️ Pattern detected
           </p>
           <p style="margin:0;font-size:13px;color:#78350F">
             This is the <strong>{pattern_count}rd low rating</strong> in the last 30 days.
@@ -138,7 +138,7 @@ async def send_low_rating_alert_email(
     if weak_areas:
         weak_items = "".join([
             f"<li style=\"margin-bottom:4px;font-size:13px;color:#374151\">"
-            f"<strong>{area}</strong>: {rating_val}/5 ?</li>"
+            f"<strong>{area}</strong>: {rating_val}/5 ⭐</li>"
             for area, rating_val in weak_areas
         ])
         weak_html = f"""
@@ -156,6 +156,9 @@ async def send_low_rating_alert_email(
     html_body = f"""
     <!DOCTYPE html>
     <html>
+    <head>
+      <meta charset="utf-8">
+    </head>
     <body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
                  background:#F9FAFB;margin:0;padding:24px">
       <div style="max-width:520px;margin:0 auto;background:#fff;
@@ -163,10 +166,10 @@ async def send_low_rating_alert_email(
                   border:1px solid #E5E7EB">
         <div style="background:#111;padding:20px 24px;
                     display:flex;align-items:center;gap:12px">
-          <span style="font-size:22px">??</span>
+          <span style="font-size:22px">🔔</span>
           <div>
             <p style="margin:0;font-size:16px;font-weight:600;color:#fff">
-              {rating}? Review â€” {business_name}
+              {rating}★ Review — {business_name}
             </p>
             <p style="margin:4px 0 0;font-size:13px;color:#9CA3AF">
               {visit_time_str}
@@ -183,8 +186,8 @@ async def send_low_rating_alert_email(
                 {rating} out of 5 stars
               </p>
               <p style="margin:2px 0 0;font-size:12px;color:#B91C1C">
-                {(meal_type.capitalize() if meal_type else "Visit")} Â· 
-                {price_range or "Price not recorded"} per head Â·
+                {(meal_type.capitalize() if meal_type else "Visit")} · 
+                {price_range or "Price not recorded"} per head ·
                 Wait: {wait_time or "not recorded"}
               </p>
             </div>
@@ -214,7 +217,7 @@ async def send_low_rating_alert_email(
                       border-radius:8px;padding:16px;margin-bottom:20px">
             <p style="font-size:12px;font-weight:600;color:#166534;
                       text-transform:uppercase;letter-spacing:0.05em;margin:0 0 6px">
-              ? What to do now
+              💡 What to do now
             </p>
             <p style="font-size:14px;color:#14532D;margin:0;line-height:1.6">
               {action_tip}
@@ -225,7 +228,7 @@ async def send_low_rating_alert_email(
                style="display:inline-block;background:#111;color:#fff;
                       text-decoration:none;padding:10px 20px;
                       border-radius:8px;font-size:13px;font-weight:600">
-              Reply on Google ?
+              Reply on Google ↗
             </a>
             <a href="{APP_URL}/dashboard" 
                style="display:inline-block;background:#F3F4F6;color:#374151;
@@ -253,7 +256,7 @@ async def send_low_rating_alert_email(
         resend.Emails.send({
             "from": "GlowQR Admin <onboarding@resend.dev>",
             "to": [owner_email],
-            "subject": f"ðŸš¨ {rating}â˜… Review just posted â€“ {business_name}",
+            "subject": f"🚨 {rating}★ Review just posted — {business_name}",
             "html": html_body
         })
     except Exception as e:
