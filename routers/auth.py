@@ -11,7 +11,8 @@ router = APIRouter(prefix="/api/auth", tags=["Auth"])
 
 @router.post("/register", response_model=schemas.UserResponse)
 def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    db_user = db.query(models.User).filter(models.User.email == user.email).first()
+    email_lower = user.email.lower()
+    db_user = db.query(models.User).filter(models.User.email.ilike(email_lower)).first()
     if db_user:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
     
@@ -19,7 +20,7 @@ def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
     
     trial_end = datetime.now(timezone.utc) + timedelta(days=3)
     new_user = models.User(
-        email=user.email, 
+        email=email_lower, 
         hashed_password=hashed_password, 
         full_name=user.full_name,
         plan="trial",
@@ -51,7 +52,8 @@ def register_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=schemas.Token)
 def login_user(user_credentials: schemas.UserLogin, db: Session = Depends(get_db)):
-    user = db.query(models.User).filter(models.User.email == user_credentials.email).first()
+    email_lower = user_credentials.email.lower()
+    user = db.query(models.User).filter(models.User.email.ilike(email_lower)).first()
     if not user or not security_auth.verify_password(user_credentials.password, user.hashed_password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect email or password")
     
