@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 import os
 
 import models
+import schemas
 from database import get_db
 from dependencies import require_basic, require_premium, get_current_user
 
