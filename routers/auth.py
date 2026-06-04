@@ -157,10 +157,15 @@ def get_me(db: Session = Depends(get_db), current_user: models.User = Depends(ge
 def update_me(update_data: dict = Body(...), db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     if "full_name" in update_data:
         current_user.full_name = update_data["full_name"]
-    if "email" in update_data:
-        # Should verify email uniqueness ideally, but keeping simple
+    email_changed = False
+    if "email" in update_data and update_data["email"] != current_user.email:
         current_user.email = update_data["email"]
+        email_changed = True
     db.commit()
+    
+    if email_changed:
+        access_token = security_auth.create_access_token(data={"sub": current_user.email})
+        return {"status": "ok", "new_token": access_token}
     return {"status": "ok"}
 
 @router.post("/update-password")
