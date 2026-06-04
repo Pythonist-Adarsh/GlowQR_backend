@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Weekly Performance Report</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f8f9fa; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+        .header { background: #1a1a1a; color: #fff; padding: 20px; display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { margin: 0; font-size: 18px; font-weight: normal; }
+        .badge { background: #fff; color: #1a1a1a; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; }
+        .content { padding: 30px; }
+        .intro { margin-bottom: 30px; }
+        .stats-grid { display: flex; gap: 15px; margin-bottom: 30px; }
+        .stat-card { flex: 1; background: #f8f9fa; padding: 15px; border-radius: 8px; text-align: center; }
+        .stat-card h3 { margin: 0 0 5px 0; font-size: 10px; text-transform: uppercase; color: #666; letter-spacing: 1px; }
+        .stat-card .value { font-size: 24px; font-weight: bold; margin-bottom: 5px; }
+        .stat-card .sub { font-size: 12px; color: #666; }
+        .section-title { font-size: 12px; text-transform: uppercase; color: #666; letter-spacing: 1px; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 8px; }
+        .progress-row { display: flex; align-items: center; margin-bottom: 15px; }
+        .progress-label { width: 120px; font-size: 14px; }
+        .progress-bar { flex: 1; height: 8px; background: #eee; border-radius: 4px; margin: 0 15px; overflow: hidden; }
+        .progress-fill { height: 100%; border-radius: 4px; }
+        .progress-value { width: 40px; font-size: 14px; font-weight: bold; text-align: right; }
+        .progress-status { width: 80px; text-align: right; font-size: 12px; font-weight: bold; padding: 2px 8px; border-radius: 12px; margin-left: 10px; }
+        .alert-box { background: #fdf2f2; border: 1px solid #fecaca; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .alert-box.success { background: #f0fdf4; border: 1px solid #bbf7d0; }
+        .alert-title { font-weight: bold; font-size: 14px; margin-bottom: 10px; display: flex; justify-content: space-between; }
+        .alert-body { font-size: 13px; color: #444; margin-bottom: 15px; }
+        .alert-footer { font-size: 13px; color: #b91c1c; background: #fff; padding: 10px; border-radius: 4px; display: flex; align-items: center; gap: 8px; }
+        .checklist { background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 30px; }
+        .checklist h4 { margin: 0 0 15px 0; font-size: 14px; }
+        .check-item { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; font-size: 14px; }
+        .button { display: block; width: 100%; background: #1a1a1a; color: #fff; text-align: center; padding: 15px; text-decoration: none; border-radius: 8px; font-weight: bold; margin-bottom: 20px; }
+        .footer { text-align: center; font-size: 12px; color: #888; padding: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>GlowQR<br><span style="font-size:12px;color:#aaa">Customer Intelligence Report</span></h1>
+            <span class="badge">Weekly digest</span>
+        </div>
+        <div class="content">
+            <div class="intro">
+                <strong>Your weekly performance report</strong>
+                <p style="font-size:14px;color:#555">Dear <strong>{{owner_name}}</strong>, here is what your customers experienced at <strong>{{business_name}}</strong> this week — and where you can improve.</p>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <h3>Overall</h3>
+                    <div class="value">{{overall_avg}}</div>
+                    <div class="sub" style="color: #eab308">★★★★★</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Total Reviews</h3>
+                    <div class="value">{{total_reviews}}</div>
+                    <div class="sub" style="color: #16a34a">+{{reviews_change}}% vs last week</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Google Posts</h3>
+                    <div class="value">{{google_posts}}</div>
+                    <div class="sub">{{conversion_rate}}% conversion</div>
+                </div>
+            </div>
+
+            <div class="section-title">Category Ratings</div>
+            
+            <div class="progress-row">
+                <div class="progress-label">Food quality</div>
+                <div class="progress-bar"><div class="progress-fill" style="width: {{food_pct}}%; background: #16a34a"></div></div>
+                <div class="progress-value">{{food_rating}}/5</div>
+                <div class="progress-status" style="background: #dcfce7; color: #16a34a">Strong</div>
+            </div>
+            
+            <div class="progress-row">
+                <div class="progress-label">Service</div>
+                <div class="progress-bar"><div class="progress-fill" style="width: {{service_pct}}%; background: #dc2626"></div></div>
+                <div class="progress-value">{{service_rating}}/5</div>
+                <div class="progress-status" style="background: #fecaca; color: #dc2626">Needs work</div>
+            </div>
+            
+            <div class="progress-row">
+                <div class="progress-label">Environment</div>
+                <div class="progress-bar"><div class="progress-fill" style="width: {{env_pct}}%; background: #f59e0b"></div></div>
+                <div class="progress-value">{{env_rating}}/5</div>
+                <div class="progress-status" style="background: #fef3c7; color: #f59e0b">Average</div>
+            </div>
+
+            <div class="section-title" style="margin-top:30px">Areas Needing Improvement</div>
+            
+            <div class="alert-box">
+                <div class="alert-title" style="color: #b91c1c">
+                    <span>Service speed</span>
+                    <span style="background: #fecaca; padding: 2px 8px; border-radius: 12px; font-size: 11px">Priority</span>
+                </div>
+                <div class="alert-body">
+                    Customers have mentioned slow service during peak hours — particularly on Friday and Saturday evenings. This is directly impacting your service rating.
+                </div>
+                <div class="alert-footer">
+                    <strong>Suggested fix:</strong> Consider adding one additional staff member during 7–10 PM on weekends.
+                </div>
+            </div>
+
+            <div class="alert-box" style="background: #fffbeb; border-color: #fde68a;">
+                <div class="alert-title" style="color: #b45309">
+                    <span>Ambiance consistency</span>
+                    <span style="background: #fde68a; padding: 2px 8px; border-radius: 12px; font-size: 11px">Moderate</span>
+                </div>
+                <div class="alert-body">
+                    Environment ratings dip on weekday afternoons. Customers expect the same experience regardless of time. Small details like lighting, cleanliness, and music matter.
+                </div>
+                <div class="alert-footer" style="color: #b45309">
+                    <strong>Suggested fix:</strong> Do a quick environment checklist every 2 hours during service.
+                </div>
+            </div>
+
+            <div class="section-title">What Customers Love</div>
+            
+            <div class="alert-box success">
+                <div class="alert-title" style="color: #15803d">
+                    <span>Food quality is your biggest strength</span>
+                </div>
+                <div class="alert-body">
+                    "{{top_dish}}" is mentioned positively in {{top_dish_pct}}% of reviews. Customers appreciate the taste and portion sizes. Keep this standard consistent — it is your strongest retention driver.
+                </div>
+            </div>
+
+            <div class="section-title">This Week's Top Dish</div>
+            <div style="background: #fff; border: 1px solid #eee; padding: 15px; border-radius: 8px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center">
+                <div>
+                    <strong>{{top_dish}}</strong>
+                    <div style="font-size: 12px; color: #666; margin-top: 5px">Selected by customers {{top_dish_count}} times</div>
+                </div>
+                <div style="text-align: right">
+                    <strong>{{top_dish_rating}}/5</strong>
+                    <div style="font-size: 10px; color: #eab308">★★★★★</div>
+                </div>
+            </div>
+
+            <div class="checklist">
+                <h4>Your action checklist for next week</h4>
+                <div class="check-item">☐ Add extra staff on Friday and Saturday evenings (7–10 PM)</div>
+                <div class="check-item">☐ Set a 2-hour environment checklist during service hours</div>
+                <div class="check-item">☐ Brief your team on the feedback received this week</div>
+                <div class="check-item">☐ Keep the QR code prominently visible at the billing counter</div>
+            </div>
+
+            <a href="{{dashboard_url}}" class="button">View full analytics dashboard</a>
+        </div>
+        <div class="footer">
+            GlowQR - Customer Intelligence<br>
+            <a href="{{unsubscribe_url}}" style="color:#888">Unsubscribe</a>
+        </div>
+    </div>
+</body>
+</html>

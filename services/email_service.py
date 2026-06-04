@@ -1,4 +1,4 @@
-import resend
+﻿import resend
 import os
 
 resend.api_key = os.environ.get("RESEND_API_KEY")
@@ -7,11 +7,11 @@ APP_URL = os.environ.get("APP_URL", "https://glow-qr-frontend.vercel.app")
 ADMIN_EMAIL = "professional.adarsh.00@gmail.com"
 
 def send_upgrade_alert_to_admin(request: dict, approve_url: str, reject_url: str):
-    amount = "â‚¹199" if request['plan_requested'] == 'basic' else "â‚¹499"
+    amount = "Ã¢â€šÂ¹199" if request['plan_requested'] == 'basic' else "Ã¢â€šÂ¹499"
     resend.Emails.send({
-        "from": "GlowQR <onboarding@resend.dev>",
+        "from": "GlowQR <professional.adarsh.00@gmail.com>",
         "to": [ADMIN_EMAIL],
-        "subject": f"ðŸ”” New Upgrade â€” {request['business_name']} wants {request['plan_requested'].upper()} {amount}",
+        "subject": f"Ã°Å¸â€â€ New Upgrade Ã¢â‚¬â€ {request['business_name']} wants {request['plan_requested'].upper()} {amount}",
         "html": f"""
         <h2>New Upgrade Request</h2>
         <p><b>Ref:</b> GQ-{request['id']:04d}</p>
@@ -23,17 +23,17 @@ def send_upgrade_alert_to_admin(request: dict, approve_url: str, reject_url: str
         <p><b>UTR:</b> {request.get('utr_number') or 'Not provided'}</p>
         <p><b>Method:</b> {request['payment_method']}</p>
         <br>
-        <a href="{approve_url}" style="background:#16a34a;color:white;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold">âœ… APPROVE</a>
+        <a href="{approve_url}" style="background:#16a34a;color:white;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold">Ã¢Å“â€¦ APPROVE</a>
         &nbsp;&nbsp;
-        <a href="{reject_url}" style="background:#dc2626;color:white;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold">â�Œ REJECT</a>
+        <a href="{reject_url}" style="background:#dc2626;color:white;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold">Ã¢ï¿½Å’ REJECT</a>
         """
     })
 
 def send_qr_is_live(business_name: str, owner_email: str, scan_url: str):
     resend.Emails.send({
-        "from": "GlowQR <onboarding@resend.dev>",
+        "from": "GlowQR <professional.adarsh.00@gmail.com>",
         "to": [owner_email],
-        "subject": f"ðŸŽ‰ Your GlowQR for {business_name} is live!",
+        "subject": f"Ã°Å¸Å½â€° Your GlowQR for {business_name} is live!",
         "html": f"""
         <h2>Your QR code is ready!</h2>
         <p>Business: {business_name}</p>
@@ -45,9 +45,9 @@ def send_qr_is_live(business_name: str, owner_email: str, scan_url: str):
 
 def send_negative_feedback_alert(business_name: str, owner_email: str, rating: int, feedback_text: str):
     resend.Emails.send({
-        "from": "GlowQR Admin <onboarding@resend.dev>",
+        "from": "GlowQR Admin <professional.adarsh.00@gmail.com>",
         "to": [owner_email],
-        "subject": f"âš ï¸� New negative feedback â€” {business_name}",
+        "subject": f"Ã¢Å¡Â Ã¯Â¸ï¿½ New negative feedback Ã¢â‚¬â€ {business_name}",
         "html": f"""
         <h2>Negative Feedback Received</h2>
         <p><b>Business:</b> {business_name}</p>
@@ -61,9 +61,9 @@ def send_negative_feedback_alert(business_name: str, owner_email: str, rating: i
 def send_activation_email(user, business_name: str, plan: str, expires_at):
     try:
         resend.Emails.send({
-            "from": "GlowQR <onboarding@resend.dev>",
+            "from": "GlowQR <professional.adarsh.00@gmail.com>",
             "to": [user.email],
-            "subject": f"ðŸŽ‰ Your GlowQR {plan.capitalize()} Plan is Now Active!",
+            "subject": f"Ã°Å¸Å½â€° Your GlowQR {plan.capitalize()} Plan is Now Active!",
             "html": f"""
             <h3>Hi {user.email},</h3>
             <p>Your {plan.upper()} plan for <b>{business_name}</b> is now active.</p>
@@ -71,7 +71,7 @@ def send_activation_email(user, business_name: str, plan: str, expires_at):
             <br>
             <p><a href="{APP_URL}/login" style="background:#16a34a;color:white;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold">Login to your dashboard</a></p>
             <br>
-            <p>â€” GlowQR Team</p>
+            <p>Ã¢â‚¬â€ GlowQR Team</p>
             """
         })
     except Exception as e:
@@ -80,16 +80,16 @@ def send_activation_email(user, business_name: str, plan: str, expires_at):
 def send_rejection_email(user, business_name: str, reason: str):
     try:
         resend.Emails.send({
-            "from": "GlowQR <onboarding@resend.dev>",
+            "from": "GlowQR <professional.adarsh.00@gmail.com>",
             "to": [user.email],
-            "subject": "GlowQR Payment Verification â€” Action Required",
+            "subject": "GlowQR Payment Verification Ã¢â‚¬â€ Action Required",
             "html": f"""
             <h3>Hi {user.email},</h3>
             <p>We could not verify your payment for <b>{business_name}</b>.</p>
             <p>Reason: <b>{reason}</b></p>
             <p>Please contact us at support@glowqr.in or resend your UTR.</p>
             <br>
-            <p>â€” GlowQR Team</p>
+            <p>Ã¢â‚¬â€ GlowQR Team</p>
             """
         })
     except Exception as e:
@@ -166,7 +166,7 @@ async def send_low_rating_alert_email(
           <span style="font-size:22px">??</span>
           <div>
             <p style="margin:0;font-size:16px;font-weight:600;color:#fff">
-              {rating}? Review — {business_name}
+              {rating}? Review â€” {business_name}
             </p>
             <p style="margin:4px 0 0;font-size:13px;color:#9CA3AF">
               {visit_time_str}
@@ -183,8 +183,8 @@ async def send_low_rating_alert_email(
                 {rating} out of 5 stars
               </p>
               <p style="margin:2px 0 0;font-size:12px;color:#B91C1C">
-                {(meal_type.capitalize() if meal_type else "Visit")} · 
-                {price_range or "Price not recorded"} per head ·
+                {(meal_type.capitalize() if meal_type else "Visit")} Â· 
+                {price_range or "Price not recorded"} per head Â·
                 Wait: {wait_time or "not recorded"}
               </p>
             </div>
@@ -251,10 +251,34 @@ async def send_low_rating_alert_email(
     
     try:
         resend.Emails.send({
-            "from": "GlowQR Admin <onboarding@resend.dev>",
+            "from": "GlowQR Admin <professional.adarsh.00@gmail.com>",
             "to": [owner_email],
-            "subject": f"🚨 {rating}★ Review just posted – {business_name}",
+            "subject": f"ðŸš¨ {rating}â˜… Review just posted â€“ {business_name}",
             "html": html_body
         })
     except Exception as e:
         print(f"Error sending email: {e}")
+
+import os
+import resend
+
+APP_URL = os.environ.get('APP_URL', 'https://glow-qr-frontend.vercel.app')
+SENDER = 'GlowQR Admin <professional.adarsh.00@gmail.com>'
+
+def send_weekly_digest(owner_email: str, data: dict):
+    try:
+        with open('d:/glowQR/backend/templates/weekly_report.html', 'r', encoding='utf-8') as f:
+            html_template = f.read()
+            
+        for key, value in data.items():
+            html_template = html_template.replace(f'{{{{{key}}}}}', str(value))
+            
+        resend.Emails.send({
+            'from': SENDER,
+            'to': [owner_email],
+            'subject': f"{data.get('business_name', 'Your Business')} — Weekly Performance Report & Improvement Tips",
+            'html': html_template
+        })
+    except Exception as e:
+        print(f"Failed to send weekly digest: {e}")
+
