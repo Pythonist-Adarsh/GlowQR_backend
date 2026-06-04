@@ -160,14 +160,14 @@ def repeat_visitors(user: models.User = Depends(require_basic), db: Session = De
 @router.get("/language-split")
 def language_split(user: models.User = Depends(require_basic), db: Session = Depends(get_db)):
     business = get_business(user, db)
-    langs = db.query(models.ScanEvent.review_language, func.count(models.ScanEvent.id).label('cnt')).filter(
+    langs = db.query(models.ScanEvent.language, func.count(models.ScanEvent.id).label('cnt')).filter(
         models.ScanEvent.business_id == business.id
-    ).group_by(models.ScanEvent.review_language).all()
+    ).group_by(models.ScanEvent.language).all()
     
     total = sum(l.cnt for l in langs)
     result = []
     for l in langs:
-        lang_name = l.review_language or "English"
+        lang_name = l.language or "English"
         result.append({
             "language": lang_name.capitalize(),
             "count": l.cnt,
@@ -651,12 +651,12 @@ def send_weekly_summary(user: models.User = Depends(require_premium), db: Sessio
         "reviews_change": 15, # mock percent change
         "google_posts": google_posts,
         "conversion_rate": int(google_posts / total_reviews * 100) if total_reviews > 0 else 0,
-        "food_rating": 4.6,
-        "food_pct": 92,
-        "service_rating": 2.8,
-        "service_pct": 56,
-        "env_rating": 3.5,
-        "env_pct": 70,
+        "food_rating": round(sum(s.food_rating for s in rated_scans if s.food_rating) / sum(1 for s in rated_scans if s.food_rating) if sum(1 for s in rated_scans if s.food_rating) > 0 else 0, 1),
+        "food_pct": int(sum(s.food_rating for s in rated_scans if s.food_rating) / sum(1 for s in rated_scans if s.food_rating) / 5 * 100 if sum(1 for s in rated_scans if s.food_rating) > 0 else 0),
+        "service_rating": round(sum(s.service_rating for s in rated_scans if s.service_rating) / sum(1 for s in rated_scans if s.service_rating) if sum(1 for s in rated_scans if s.service_rating) > 0 else 0, 1),
+        "service_pct": int(sum(s.service_rating for s in rated_scans if s.service_rating) / sum(1 for s in rated_scans if s.service_rating) / 5 * 100 if sum(1 for s in rated_scans if s.service_rating) > 0 else 0),
+        "env_rating": round(sum(s.atmosphere_rating for s in rated_scans if s.atmosphere_rating) / sum(1 for s in rated_scans if s.atmosphere_rating) if sum(1 for s in rated_scans if s.atmosphere_rating) > 0 else 0, 1),
+        "env_pct": int(sum(s.atmosphere_rating for s in rated_scans if s.atmosphere_rating) / sum(1 for s in rated_scans if s.atmosphere_rating) / 5 * 100 if sum(1 for s in rated_scans if s.atmosphere_rating) > 0 else 0),
         "top_dish": "Special Thali",
         "top_dish_count": 34,
         "top_dish_rating": 4.8,
@@ -703,6 +703,7 @@ def get_negative_alerts(
             "is_resolved": f.is_resolved,
             "resolved_at": f.resolved_at,
             "created_at": f.created_at,
+            "email_sent": getattr(f, "email_sent", False),
             "overall_rating": se.overall_rating if se else None,
             "food_rating": se.food_rating if se else None,
             "service_rating": se.service_rating if se else None,

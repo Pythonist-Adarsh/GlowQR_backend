@@ -114,6 +114,7 @@ def record_scan(record: schemas.ScanRecordCreate, request: Request, db: Session 
         if record.review_variant is not None: scan.review_variant = record.review_variant
         if record.review_text is not None: scan.review_text = record.review_text
         if record.was_negative is not None: scan.was_negative = record.was_negative
+        if record.language is not None: scan.language = record.language
         
         db.commit()
         return {"session_id": scan.session_id, "recorded": True}
@@ -121,10 +122,17 @@ def record_scan(record: schemas.ScanRecordCreate, request: Request, db: Session 
 @router.post("/api/scan/generate-review")
 async def generate_review_endpoint(req: schemas.ReviewGenerationRequest, db: Session = Depends(get_db)):
     qr_code = None
+    previous_reviews = []
     if req.qr_slug and req.qr_slug.lower() != 'onboarding':
         qr_code = db.query(models.QRCode).filter(models.QRCode.slug == req.qr_slug).first()
         if not qr_code:
             raise HTTPException(status_code=404, detail="QR Code not found")
+        
+        recent_scans = db.query(models.ScanEvent).filter(
+            models.ScanEvent.business_id == qr_code.business_id,
+            models.ScanEvent.review_text.isnot(None)
+        ).order_by(models.ScanEvent.scanned_at.desc()).limit(15).all()
+        previous_reviews = [s.review_text for s in recent_scans if s.review_text]
         
     variants = await generate_reviews(
         business_name=req.business_name,
@@ -141,7 +149,8 @@ async def generate_review_endpoint(req: schemas.ReviewGenerationRequest, db: Ses
         language=req.language,
         variant_count=req.variant_count,
         plan=req.plan,
-        city=req.city
+        city=req.city,
+        previous_reviews=previous_reviews
     )
     
     return {"variants": variants, "language": req.language}
@@ -170,12 +179,17 @@ def submit_feedback(feedback: schemas.FeedbackSubmitCreate, db: Session = Depend
     db.add(new_feedback)
     db.commit()
     
-    if business.owner_email:
+    owner = db.query(models.User).filter(models.User.id == business.owner_id).first()
+    plan = owner.plan if owner else "trial"
+
+    if business.owner_email and plan == "premium":
         try:
             send_negative_feedback_alert(business.name, business.owner_email, feedback.rating, feedback.feedback)
+            new_feedback.email_sent = True
         except Exception as e:
             print(f"Failed to send alert email: {e}")
             
+    db.commit()
     return {"message": "Thank you for your feedback"}
 
 @router.post("/api/scan/alert-owner")
@@ -200,9 +214,11 @@ def alert_owner_endpoint(req: schemas.AlertOwnerRequest, background_tasks: Backg
         feedback_text=req.review_text
     )
     db.add(new_feedback)
-    db.commit()
+    
+    owner = db.query(models.User).filter(models.User.id == business.owner_id).first()
+    plan = owner.plan if owner else "trial"
 
-    if business.owner_email:
+    if business.owner_email and plan == "premium":
         from services.email_service import send_low_rating_alert_email
         pattern_dict = {"total_count": 1, "last_seen": None}
         background_tasks.add_task(
@@ -221,4 +237,7 @@ def alert_owner_endpoint(req: schemas.AlertOwnerRequest, background_tasks: Backg
             req.action_tip,
             datetime.now(timezone.utc)
         )
+        new_feedback.email_sent = True
+        
+    db.commit()
     return {"status": "alert_queued"}

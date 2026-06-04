@@ -154,6 +154,7 @@ class ScanEvent(Base):
     wait_time = Column(String, nullable=True)
     review_variant = Column(Integer, nullable=True)
     review_text = Column(String, nullable=True)
+    language = Column(String, nullable=True)
     was_negative = Column(Boolean, default=False)
     
     device_type = Column(String, nullable=True)
@@ -183,6 +184,7 @@ class NegativeFeedback(Base):
     is_read = Column(Boolean, default=False)
     is_resolved = Column(Boolean, default=False)
     resolved_at = Column(DateTime(timezone=True), nullable=True)
+    email_sent = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     business = relationship("Business", back_populates="feedback")

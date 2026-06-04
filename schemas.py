@@ -140,6 +140,7 @@ class ScanRecordCreate(BaseModel):
     review_variant: Optional[int] = None
     review_text: Optional[str] = None
     was_negative: Optional[bool] = None
+    language: Optional[str] = None
 
 class FeedbackSubmitCreate(BaseModel):
     qr_slug: str

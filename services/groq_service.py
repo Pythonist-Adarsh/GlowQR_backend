@@ -293,7 +293,8 @@ async def generate_reviews(
     plan: str = 'trial',
     seating_type: str = None,
     wait_time: str = None,
-    city: str = None
+    city: str = None,
+    previous_reviews: list[str] = None
 ) -> list[str]:
     
     business_data = {
@@ -351,6 +352,12 @@ async def generate_reviews(
     else:
         user_msg = build_premium_prompt(business_data, customer_data, selected_items, language, rating_guidance)
     
+    if previous_reviews:
+        user_msg += "\n\nCRITICAL INSTRUCTION: Do NOT generate any review that is identical or highly similar to the following recent reviews from this business:\n"
+        for pr in previous_reviews[:5]:
+            user_msg += f"- \"{pr}\"\n"
+        user_msg += "\nThe generated reviews MUST be completely unique and fresh."
+
     try:
         response = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
@@ -413,6 +420,12 @@ Funnel: Scan->Open {data.get('scan_to_open', 0)}%, Open->Copy {data.get('open_to
 
 Return ONLY JSON array (3-5 insights). Structure:
 [{{"severity":"red|yellow|green","area":"string","problem":"string","evidence":"string","action":"string"}}]"""
+
+    if previous_reviews:
+        user_msg += "\n\nCRITICAL INSTRUCTION: Do NOT generate any review that is identical or highly similar to the following recent reviews from this business:\n"
+        for pr in previous_reviews[:5]:
+            user_msg += f"- \"{pr}\"\n"
+        user_msg += "\nThe generated reviews MUST be completely unique and fresh."
 
     try:
         response = client.chat.completions.create(
