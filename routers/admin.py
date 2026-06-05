@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Header, Query, Request, Cookie
+from fastapi import APIRouter, Depends, HTTPException, Header, Query, Request, Cookie, BackgroundTasks
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from database import get_db
@@ -414,3 +414,16 @@ def update_settings(data: schemas.AdminSettingsUpdate, db: Session = Depends(get
     db.commit()
     db.refresh(settings)
     return settings
+
+@router.post("/run-daily-sync")
+async def trigger_daily_sync(
+    background_tasks: BackgroundTasks,
+    x_admin_secret: str = Header(...)
+):
+    admin_secret = os.getenv("ADMIN_SECRET", "supersecretadmin")
+    if x_admin_secret != admin_secret:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    from jobs.daily_sync import run_daily_sync
+    background_tasks.add_task(run_daily_sync)
+    return {"message": "Daily sync started in background"}
