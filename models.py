@@ -296,3 +296,14 @@ class AIAnalyticsCache(Base):
     
     business = relationship("Business")
 
+
+class GoogleRatingHistory(Base):
+    __tablename__ = "google_rating_history"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    business_id = Column(Integer, ForeignKey("businesses.id", ondelete="CASCADE"))
+    rating = Column(Float, nullable=True)
+    review_count = Column(Integer, nullable=True)
+    fetched_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    business = relationship("Business")
