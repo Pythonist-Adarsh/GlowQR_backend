@@ -61,7 +61,10 @@ def best_time(user: models.User = Depends(require_basic), db: Session = Depends(
             func.extract('isodow', models.ScanEvent.scanned_at).label('dow'),
             func.extract('hour', models.ScanEvent.scanned_at).label('hour'),
             func.count().label('cnt')
-        ).filter(models.ScanEvent.business_id == business.id).group_by('dow', 'hour').order_by(desc('cnt')).first()
+        ).filter(
+            models.ScanEvent.business_id == business.id,
+            models.ScanEvent.overall_rating != None
+        ).group_by('dow', 'hour').order_by(desc('cnt')).first()
         
         if not best:
             return {"best_day": "N/A", "best_hour": 0, "best_hour_label": "N/A"}
@@ -201,10 +204,14 @@ def get_summary(user: models.User = Depends(require_basic), db: Session = Depend
     business = get_business(user, db)
     
     total = db.query(models.ScanEvent).filter(models.ScanEvent.business_id == business.id).count()
-    redirects = db.query(models.ScanEvent).filter(
-        models.ScanEvent.business_id == business.id, 
-        models.ScanEvent.redirected_to_google == True
-    ).count()
+    has_redirect = bool(business.google_review_url and business.google_review_url != '#')
+    if has_redirect:
+        redirects = db.query(models.ScanEvent).filter(
+            models.ScanEvent.business_id == business.id,
+            models.ScanEvent.overall_rating != None
+        ).count()
+    else:
+        redirects = 0
     
     conv_rate = (redirects / total * 100) if total > 0 else 0
     
@@ -250,7 +257,7 @@ def get_summary(user: models.User = Depends(require_basic), db: Session = Depend
             "atmosphere_rating": r.atmosphere_rating,
             "selected_items": r.selected_items,
             "review_text": r.review_text,
-            "redirected_to_google": r.redirected_to_google,
+            "redirected_to_google": has_redirect,
             "created_at": r.scanned_at.isoformat() if r.scanned_at else None
         })
             
@@ -264,6 +271,107 @@ def get_summary(user: models.User = Depends(require_basic), db: Session = Depend
         "all_reviews": formatted_reviews,
         "recent_reviews": formatted_reviews[:5]
     }
+
+@router.get("/scans-chart")
+def scans_chart(user: models.User = Depends(require_basic), db: Session = Depends(get_db)):
+    business = get_business(user, db)
+    now = datetime.now(timezone.utc)
+    
+    # If trial, last 7 days. Else last 30 days.
+    days = 7 if user.plan == "trial" else 30
+    start_date = now - timedelta(days=days-1)
+    
+    scans = db.query(models.ScanEvent).filter(
+        models.ScanEvent.business_id == business.id,
+        models.ScanEvent.scanned_at >= start_date
+    ).all()
+    
+    # Group by date
+    from collections import defaultdict
+    scans_by_date = defaultdict(int)
+    for scan in scans:
+        if scan.scanned_at:
+            date_str = scan.scanned_at.strftime("%b %d")
+            scans_by_date[date_str] += 1
+            
+    # Format into array with 0s for empty dates
+    result = []
+    for i in range(days):
+        d = start_date + timedelta(days=i)
+        date_str = d.strftime("%b %d")
+        result.append({
+            "date": date_str,
+            "scans": scans_by_date.get(date_str, 0)
+        })
+        
+    return {"data": result}
+
+@router.get("/category-ratings")
+def category_ratings(user: models.User = Depends(require_basic), db: Session = Depends(get_db)):
+    business = get_business(user, db)
+    
+    food = db.query(func.avg(models.ScanEvent.food_rating)).filter(
+        models.ScanEvent.business_id == business.id, models.ScanEvent.food_rating != None
+    ).scalar() or 0
+    service = db.query(func.avg(models.ScanEvent.service_rating)).filter(
+        models.ScanEvent.business_id == business.id, models.ScanEvent.service_rating != None
+    ).scalar() or 0
+    environment = db.query(func.avg(models.ScanEvent.atmosphere_rating)).filter(
+        models.ScanEvent.business_id == business.id, models.ScanEvent.atmosphere_rating != None
+    ).scalar() or 0
+    
+    return {
+        "food": round(food, 1),
+        "service": round(service, 1),
+        "environment": round(environment, 1)
+    }
+
+@router.get("/top-menu-items")
+def top_menu_items(user: models.User = Depends(require_basic), db: Session = Depends(get_db)):
+    business = get_business(user, db)
+    
+    scans = db.query(models.ScanEvent.selected_items).filter(
+        models.ScanEvent.business_id == business.id,
+        models.ScanEvent.selected_items != None
+    ).all()
+    
+    from collections import defaultdict
+    item_stats = defaultdict(int)
+    for scan in scans:
+        items = scan.selected_items or []
+        for item in items:
+            item_stats[item] += 1
+                
+    result = []
+    for item, count in item_stats.items():
+        result.append({"name": item, "count": count})
+        
+    result.sort(key=lambda x: x["count"], reverse=True)
+    return {"items": result[:5]}
+
+@router.get("/all-reviews")
+def all_reviews(user: models.User = Depends(require_basic), db: Session = Depends(get_db)):
+    business = get_business(user, db)
+    
+    reviews = db.query(models.ScanEvent).filter(
+        models.ScanEvent.business_id == business.id,
+        models.ScanEvent.overall_rating != None
+    ).order_by(desc(models.ScanEvent.scanned_at)).all()
+    
+    has_redirect = bool(business.google_review_url and business.google_review_url != '#')
+    
+    formatted = []
+    for r in reviews:
+        formatted.append({
+            "id": r.id,
+            "overall_rating": r.overall_rating,
+            "review_text": r.review_text,
+            "redirected_to_google": has_redirect,
+            "created_at": r.scanned_at.isoformat() if r.scanned_at else None,
+            "selected_items": r.selected_items
+        })
+        
+    return {"reviews": formatted}
 
 @router.get("/monthly-report")
 def monthly_report(user: models.User = Depends(require_basic), db: Session = Depends(get_db)):
