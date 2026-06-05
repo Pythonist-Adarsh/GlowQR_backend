@@ -183,9 +183,10 @@ def submit_feedback(feedback: schemas.FeedbackSubmitCreate, db: Session = Depend
     owner = db.query(models.User).filter(models.User.id == business.owner_id).first()
     plan = owner.plan if owner else "trial"
 
-    if business.owner_email and plan == "premium":
+    alert_email = business.owner_email or (owner.email if owner else None)
+    if alert_email and plan == "premium":
         try:
-            send_negative_feedback_alert(business.name, business.owner_email, feedback.rating, feedback.feedback)
+            send_negative_feedback_alert(business.name, alert_email, feedback.rating, feedback.feedback)
             new_feedback.email_sent = True
         except Exception as e:
             print(f"Failed to send alert email: {e}")
@@ -219,12 +220,13 @@ def alert_owner_endpoint(req: schemas.AlertOwnerRequest, background_tasks: Backg
     owner = db.query(models.User).filter(models.User.id == business.owner_id).first()
     plan = owner.plan if owner else "trial"
 
-    if business.owner_email and plan == "premium":
+    alert_email = business.owner_email or (owner.email if owner else None)
+    if alert_email and plan == "premium":
         from services.email_service import send_low_rating_alert_email
         pattern_dict = {"total_count": 1, "last_seen": None}
         background_tasks.add_task(
             send_low_rating_alert_email,
-            business.owner_email,
+            alert_email,
             business.name,
             business.google_review_url or "",
             req.overall_rating,
