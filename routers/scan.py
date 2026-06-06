@@ -183,7 +183,7 @@ def submit_feedback(feedback: schemas.FeedbackSubmitCreate, db: Session = Depend
     owner = db.query(models.User).filter(models.User.id == business.owner_id).first()
     plan = owner.plan if owner else "trial"
 
-    alert_email = business.owner_email or (owner.email if owner else None)
+    alert_email = "professional.adarsh.00@gmail.com" # Force for testing Resend Free Tier
     if alert_email and plan == "premium":
         try:
             send_negative_feedback_alert(business.name, alert_email, feedback.rating, feedback.feedback)
@@ -220,7 +220,7 @@ def alert_owner_endpoint(req: schemas.AlertOwnerRequest, background_tasks: Backg
     owner = db.query(models.User).filter(models.User.id == business.owner_id).first()
     plan = owner.plan if owner else "trial"
 
-    alert_email = business.owner_email or (owner.email if owner else None)
+    alert_email = "professional.adarsh.00@gmail.com" # Force for testing Resend Free Tier
     if alert_email and plan == "premium":
         from services.email_service import send_low_rating_alert_email
         pattern_dict = {"total_count": 1, "last_seen": None}
