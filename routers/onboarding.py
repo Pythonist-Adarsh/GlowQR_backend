@@ -6,6 +6,7 @@ import models, schemas
 import re
 import secrets
 import json
+from datetime import datetime, timezone
 from services.storage_service import upload_logo_to_cloudinary
 from services.groq_service import extract_menu_from_image
 from services.email_service import send_qr_is_live
@@ -19,11 +20,23 @@ def get_status(db: Session = Depends(get_db), current_user: models.User = Depend
     if not business:
         return {"is_onboarded": False, "current_step": 0, "business": None}
     
+    plan = "basic"
+    subscription = db.query(models.Subscription).filter(
+        models.Subscription.user_id == current_user.id,
+        models.Subscription.status == 'active'
+    ).first()
+    
+    if subscription:
+        plan = subscription.plan_name.lower()
+        if subscription.end_date and subscription.end_date < datetime.now(timezone.utc):
+            plan = "expired"
+
     return {
         "is_onboarded": business.is_onboarded,
         "current_step": business.onboarding_step,
         "business": {
             **{c.name: getattr(business, c.name) for c in business.__table__.columns},
+            "plan": plan,
             "menu_items": [{"name": i.name} for i in business.menu_items] if hasattr(business, 'menu_items') else []
         }
     }
