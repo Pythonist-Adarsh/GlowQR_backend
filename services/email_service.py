@@ -285,3 +285,80 @@ def send_weekly_digest(owner_email: str, data: dict):
     except Exception as e:
         print(f"Failed to send weekly digest: {e}")
 
+def send_owner_bomb_alert(owner_email: str, business_name: str, alert, business_id: int):
+    subject = f"URGENT: Possible review attack on {business_name}" if alert.alert_level == 'red' else f"Unusual review activity detected — {business_name}"
+    color = "#EF4444" if alert.alert_level == 'red' else "#F59E0B"
+    badge_text = alert.alert_level.upper()
+    
+    reasons_html = "".join([f"<li>{r}</li>" for r in (alert.reasons or [])])
+    
+    html = f"""
+    <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
+        <h2 style="color: {color};">[{badge_text}] Review Bomb Alert</h2>
+        <p><b>Business:</b> {business_name}</p>
+        <p><b>Risk Score:</b> {alert.risk_score}/100</p>
+        <p><b>Verdict:</b> {alert.verdict.replace('_', ' ').title()}</p>
+        
+        <h3>What happened?</h3>
+        <p>{(alert.reasons[0] if alert.reasons else "We detected highly unusual review patterns directed at your QR code.")}</p>
+        
+        <h3>Detection Reasons:</h3>
+        <ul>
+            {reasons_html}
+        </ul>
+        
+        <h3>Recommended Actions:</h3>
+        <ul>
+            <li>Check your Google Business Profile for new 1-star reviews</li>
+            <li>Use the "Flag as inappropriate" option on each suspicious review</li>
+            <li>Attach this report when contacting Google Business Support</li>
+            <li>Brief your team — this appears to be a coordinated attack</li>
+            <li>Contact GlowQR admin for further assistance</li>
+        </ul>
+        
+        <br/>
+        <a href="{alert.evidence_report_url or '#'}" style="display:inline-block; background:#111; color:#fff; text-decoration:none; padding:10px 20px; border-radius:8px; margin-right:10px;">Download Evidence Report</a>
+        <a href="{APP_URL}/dashboard" style="display:inline-block; background:#f3f4f6; color:#111; text-decoration:none; padding:10px 20px; border-radius:8px;">View in Dashboard</a>
+        
+        <hr style="margin-top: 30px; border: none; border-top: 1px solid #e5e7eb;" />
+        <p style="font-size: 12px; color: #6b7280;">Your internal GlowQR rating has NOT been affected by these flagged sessions.</p>
+    </div>
+    """
+    
+    try:
+        resend.Emails.send({
+            "from": "GlowQR Security <onboarding@resend.dev>",
+            "to": [owner_email],
+            "subject": subject,
+            "html": html
+        })
+    except Exception as e:
+        print(f"Error sending owner bomb alert: {e}")
+
+def send_admin_bomb_alert(admin_email: str, business_name: str, alert, owner):
+    subject = f"Bomb alert [{alert.alert_level}] — {business_name} — Score: {alert.risk_score}"
+    
+    html = f"""
+    <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
+        <h2 style="color: #111;">Admin Alert: Review Bomb Detected</h2>
+        <p><b>Business:</b> {business_name} (ID: {alert.business_id})</p>
+        <p><b>Owner:</b> {owner.full_name} ({owner.email})</p>
+        <p><b>Risk Score:</b> {alert.risk_score}/100</p>
+        <p><b>Verdict:</b> {alert.verdict}</p>
+        <p><b>Sessions Involved:</b> {len(alert.sessions_involved) if alert.sessions_involved else 0}</p>
+        
+        <br/>
+        <a href="{APP_URL}/admin/bomb-alerts" style="display:inline-block; background:#111; color:#fff; text-decoration:none; padding:10px 20px; border-radius:8px; margin-right:10px;">View in Admin Dashboard</a>
+    </div>
+    """
+    
+    try:
+        resend.Emails.send({
+            "from": "GlowQR System <onboarding@resend.dev>",
+            "to": [admin_email],
+            "subject": subject,
+            "html": html
+        })
+    except Exception as e:
+        print(f"Error sending admin bomb alert: {e}")
+

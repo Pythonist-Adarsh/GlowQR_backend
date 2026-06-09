@@ -7,6 +7,7 @@ import hashlib
 from datetime import datetime, timezone, timedelta
 from services.groq_service import generate_reviews
 from services.email_service import send_negative_feedback_alert, send_low_rating_alert_email
+from services.review_bomb_detector import ReviewBombDetector
 from sqlalchemy import func
 
 router = APIRouter(tags=["Scan"])
@@ -244,3 +245,36 @@ def alert_owner_endpoint(req: schemas.AlertOwnerRequest, background_tasks: Backg
         
     db.commit()
     return {"status": "alert_queued"}
+
+@router.post("/api/scan/session")
+def record_scan_session(req: schemas.ScanSessionCreate, request: Request, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    qr_code = db.query(models.QRCode).filter(models.QRCode.slug == req.qr_slug).first()
+    if not qr_code:
+        raise HTTPException(status_code=404, detail="QR Code not found")
+        
+    business = db.query(models.Business).filter(models.Business.id == qr_code.business_id).first()
+    if not business:
+        raise HTTPException(status_code=404, detail="Business not found")
+        
+    owner = db.query(models.User).filter(models.User.id == business.owner_id).first()
+    plan = owner.plan if owner else "trial"
+    
+    ip_hash = hashlib.sha256(request.client.host.encode()).hexdigest() if request.client else None
+    
+    new_session = models.ScanSession(
+        business_id=business.id,
+        session_token=req.session_token,
+        ip_address=ip_hash,
+        device_fingerprint=req.device_fingerprint,
+        geo_block=req.geo_block,
+        overall_rating=req.overall_rating,
+        time_to_rate_seconds=req.time_to_rate_seconds,
+        redirected_to_google=req.redirected_to_google
+    )
+    db.add(new_session)
+    db.commit()
+    
+    if req.overall_rating <= 2 and plan == "premium":
+        background_tasks.add_task(ReviewBombDetector.run_detection, business.id)
+        
+    return {"status": "saved"}

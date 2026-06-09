@@ -3,7 +3,7 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from sqlalchemy.dialects.postgresql import ARRAY
 from database import Base
-
+import uuid
 class User(Base):
     __tablename__ = "users"
 
@@ -307,3 +307,40 @@ class GoogleRatingHistory(Base):
     fetched_at = Column(DateTime(timezone=True), server_default=func.now())
     
     business = relationship("Business")
+
+class ScanSession(Base):
+    __tablename__ = "scan_sessions"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()), index=True)
+    business_id = Column(Integer, ForeignKey("businesses.id", ondelete="CASCADE"))
+    session_token = Column(String, unique=True, index=True)
+    ip_address = Column(String) # hashed
+    device_fingerprint = Column(String) # hashed
+    geo_block = Column(String)
+    overall_rating = Column(Integer, nullable=True)
+    scan_timestamp = Column(DateTime(timezone=True), server_default=func.now())
+    time_to_rate_seconds = Column(Integer, nullable=True)
+    redirected_to_google = Column(Boolean, default=False)
+    is_flagged = Column(Boolean, default=False)
+    flag_reason = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    business = relationship("Business", backref="scan_sessions")
+
+class BombAlert(Base):
+    __tablename__ = "bomb_alerts"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()), index=True)
+    business_id = Column(Integer, ForeignKey("businesses.id", ondelete="CASCADE"))
+    triggered_at = Column(DateTime(timezone=True), server_default=func.now())
+    risk_score = Column(Integer, default=0)
+    verdict = Column(String) # 'organic', 'suspicious', 'coordinated_attack'
+    alert_level = Column(String) # 'none', 'yellow', 'red'
+    sessions_involved = Column(ARRAY(String), nullable=True)
+    reasons = Column(JSON, nullable=True)
+    recommended_action = Column(String, nullable=True)
+    is_resolved = Column(Boolean, default=False)
+    evidence_report_url = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    business = relationship("Business", backref="bomb_alerts")

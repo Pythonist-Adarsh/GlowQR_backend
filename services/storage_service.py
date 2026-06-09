@@ -28,3 +28,18 @@ async def upload_logo_to_cloudinary(file_bytes: bytes, business_id: int) -> str:
     except Exception as e:
         print(f"Cloudinary upload error: {e}")
         return None
+
+async def upload_pdf_to_cloudinary(file_bytes: bytes, business_id: int, alert_id: str) -> str:
+    """Uploads an evidence report PDF to Cloudinary and returns the secure URL."""
+    try:
+        response = cloudinary.uploader.upload(
+            file_bytes,
+            resource_type="raw",
+            folder=f"glowqr/evidence/{business_id}",
+            public_id=f"report_{alert_id}",
+            format="pdf"
+        )
+        return response.get("secure_url")
+    except Exception as e:
+        print(f"Cloudinary PDF upload error: {e}")
+        return None

@@ -143,6 +143,14 @@ class ScanRecordCreate(BaseModel):
     language: Optional[str] = None
     redirected_to_google: Optional[bool] = None
 
+class ScanSessionCreate(BaseModel):
+    qr_slug: str
+    session_token: str
+    device_fingerprint: str
+    geo_block: Optional[str] = None
+    overall_rating: int
+    time_to_rate_seconds: int
+    redirected_to_google: bool
 class FeedbackSubmitCreate(BaseModel):
     qr_slug: str
     rating: int

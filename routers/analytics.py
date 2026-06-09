@@ -220,6 +220,17 @@ def get_summary(user: models.User = Depends(require_basic), db: Session = Depend
         models.ScanEvent.overall_rating != None
     ).scalar() or 0
     
+    organic_rating = db.query(func.avg(models.ScanSession.overall_rating)).filter(
+        models.ScanSession.business_id == business.id,
+        models.ScanSession.overall_rating != None,
+        models.ScanSession.is_flagged == False
+    ).scalar() or 0
+    
+    all_ratings = db.query(func.avg(models.ScanSession.overall_rating)).filter(
+        models.ScanSession.business_id == business.id,
+        models.ScanSession.overall_rating != None
+    ).scalar() or 0
+    
     now = datetime.now(timezone.utc)
     start_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     
@@ -266,6 +277,8 @@ def get_summary(user: models.User = Depends(require_basic), db: Session = Depend
         "total_redirects": redirects,
         "conversion_rate": round(conv_rate, 1),
         "google_rating": round(avg_rating, 1),
+        "organic_rating": round(organic_rating, 1),
+        "all_ratings": round(all_ratings, 1),
         "reviews_this_month": reviews_this_month,
         "ratings_split": ratings_split,
         "all_reviews": formatted_reviews,

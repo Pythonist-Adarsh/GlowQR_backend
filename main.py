@@ -21,6 +21,7 @@ from routers.scan import router as scan_router
 from routers.analytics import router as analytics_router
 from routers.upgrade import router as upgrade_router
 from routers.admin import router as admin_router
+from routers.bomb_alerts import router as bomb_alerts_router
 
 load_dotenv(override=True)
 models.Base.metadata.create_all(bind=engine)
@@ -75,6 +76,7 @@ app.include_router(scan_router)
 app.include_router(analytics_router)
 app.include_router(upgrade_router)
 app.include_router(admin_router)
+app.include_router(bomb_alerts_router)
 
 # Google OAuth Setup
 oauth = OAuth()
