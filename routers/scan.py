@@ -123,36 +123,14 @@ def record_scan(record: schemas.ScanRecordCreate, request: Request, db: Session 
 
 @router.post("/api/scan/generate-review")
 async def generate_review_endpoint(req: schemas.ReviewGenerationRequest, db: Session = Depends(get_db)):
-    qr_code = None
-    previous_reviews = []
-    if req.qr_slug and req.qr_slug.lower() != 'onboarding':
-        qr_code = db.query(models.QRCode).filter(models.QRCode.slug == req.qr_slug).first()
-        if not qr_code:
-            raise HTTPException(status_code=404, detail="QR Code not found")
-        
-        recent_scans = db.query(models.ScanEvent).filter(
-            models.ScanEvent.business_id == qr_code.business_id,
-            models.ScanEvent.review_text.isnot(None)
-        ).order_by(models.ScanEvent.scanned_at.desc()).limit(15).all()
-        previous_reviews = [s.review_text for s in recent_scans if s.review_text]
-        
     variants = await generate_reviews(
         business_name=req.business_name,
         category=req.category,
-        tagline=req.tagline,
         overall_rating=req.overall_rating,
-        food_rating=req.food_rating,
-        service_rating=req.service_rating,
-        atmosphere_rating=req.atmosphere_rating,
         selected_items=req.selected_items,
-        signature_dish=req.signature_dish,
-        meal_type=req.meal_type,
-        price_range=req.price_range,
-        language=req.language,
-        variant_count=req.variant_count,
         plan=req.plan,
         city=req.city,
-        previous_reviews=previous_reviews
+        session_id=req.session_id
     )
     
     return {"variants": variants, "language": req.language}

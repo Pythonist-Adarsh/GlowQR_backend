@@ -176,6 +176,7 @@ class ReviewGenerationRequest(BaseModel):
     variant_count: int = 3
     plan: str = "trial"
     city: Optional[str] = None
+    session_id: Optional[str] = None
 
 class MenuItemAnalytics(BaseModel):
     name: str
