@@ -53,6 +53,8 @@ def step_1(data: schemas.OnboardingStep1, db: Session = Depends(get_db), current
     
     if data.website:
         business.website_url = data.website
+    if hasattr(data, 'instagram_url') and data.instagram_url:
+        business.instagram_url = data.instagram_url
 
     qr_code = db.query(models.QRCode).filter(models.QRCode.business_id == business.id).first()
     if not qr_code:

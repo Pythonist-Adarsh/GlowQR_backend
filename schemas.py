@@ -58,6 +58,7 @@ class BusinessBase(BaseModel):
     primary_color: str = "#6366F1"
     google_review_url: Optional[str] = None
     website_url: Optional[str] = None
+    instagram_url: Optional[str] = None
     phone_number: Optional[str] = None
     whatsapp_number: Optional[str] = None
     address: Optional[str] = None
@@ -103,6 +104,7 @@ class OnboardingStep1(BaseModel):
     name: str = Field(..., min_length=2, max_length=255)
     tagline: Optional[str] = None
     website: Optional[str] = None
+    instagram_url: Optional[str] = None
     google_review_url: str
     place_id: Optional[str] = None
     google_rating: Optional[float] = None

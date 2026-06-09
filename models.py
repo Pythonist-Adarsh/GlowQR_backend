@@ -60,6 +60,7 @@ class Business(Base):
     place_id = Column(String, nullable=True)
     google_review_url = Column(String, nullable=True)
     website_url = Column(String, nullable=True)
+    instagram_url = Column(String, nullable=True)
     google_rating = Column(Float, nullable=True)
     review_count = Column(Integer, nullable=True)
     last_google_sync = Column(DateTime(timezone=True), nullable=True)
