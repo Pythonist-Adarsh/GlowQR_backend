@@ -11,6 +11,12 @@ if DATABASE_URL.startswith("postgres://"):
 engine = create_engine(DATABASE_URL)
 
 with engine.connect() as conn:
-    result = conn.execute(text("SELECT id, name, slug, instagram_url FROM businesses;"))
+    print("Users:")
+    result = conn.execute(text("SELECT id, plan FROM users;"))
+    for row in result:
+        print(row)
+        
+    print("\nSubscriptions:")
+    result = conn.execute(text("SELECT id, user_id, plan_name, status FROM subscriptions;"))
     for row in result:
         print(row)

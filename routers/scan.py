@@ -45,6 +45,7 @@ def get_qr_page_data(slug: str, db: Session = Depends(get_db)):
         "city": business.city or "",
         "plan": plan,
         "website": getattr(business, 'website_url', getattr(business, 'website', '')),
+        "instagram_url": getattr(business, 'instagram_url', ''),
         "google_review_url": business.google_review_url or "",
         "menu_items": menu_items,
         "business_category": business.category or "",
