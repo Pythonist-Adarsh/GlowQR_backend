@@ -20,3 +20,4 @@ slowapi
 Pillow
 qrcode
 PyJWT
+reportlab
