@@ -27,8 +27,8 @@ def get_status(db: Session = Depends(get_db), current_user: models.User = Depend
     ).first()
     
     if subscription:
-        plan = subscription.plan_name.lower()
-        if subscription.end_date and subscription.end_date < datetime.now(timezone.utc):
+        plan = subscription.plan.lower() if subscription.plan else "basic"
+        if subscription.current_period_end and subscription.current_period_end < datetime.now(timezone.utc):
             plan = "expired"
 
     return {

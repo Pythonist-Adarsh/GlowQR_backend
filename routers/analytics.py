@@ -961,7 +961,7 @@ def get_reviews_data(user: models.User = Depends(require_basic), db: Session = D
                                if current_count is not None and baseline_count is not None else None
 
     rating_improvement = round(current_rating - baseline_rating, 1) \
-                         if current_rating is not None and baseline_rating is not None else None
+                         if (current_rating is not None and baseline_rating is not None) else 0.0
 
     total_scans = db.query(models.ScanEvent).filter(models.ScanEvent.business_id == bid).count()
     redirected_count = db.query(models.ScanEvent).filter(
