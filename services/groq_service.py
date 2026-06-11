@@ -85,6 +85,13 @@ Business Details:
 
 Generate exactly 5 reviews based on an overall rating of {overall_rating}/5.
 
+CRITICAL INSTRUCTION FOR ALL REVIEWS:
+Every single review MUST naturally weave in:
+1. The location ({business_location})
+2. The business category ({category})
+3. At least one of the specific items/services ({services_str})
+This is to highlight the business for local SEO.
+
 MIX REQUIRED:
 REVIEW 1, 2, 3 — Normal English
 - Simple, friendly, easy to understand
@@ -112,6 +119,13 @@ Business Details:
 - session_id: {session_id}
 
 Generate exactly 5 reviews based on an overall rating of {overall_rating}/5.
+
+CRITICAL INSTRUCTION FOR ALL REVIEWS:
+Every single review MUST naturally weave in:
+1. The location ({business_location})
+2. The business category ({category})
+3. At least one of the specific items/services ({services_str})
+This is to highlight the business for local SEO.
 
 ALL 5 REVIEWS — Normal English
 - Simple, friendly, easy to understand
