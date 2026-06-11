@@ -406,11 +406,28 @@ def monthly_report(user: models.User = Depends(require_basic), db: Session = Dep
     
     change = ((cur_reviews - prev_reviews) / prev_reviews * 100) if prev_reviews > 0 else (100 if cur_reviews > 0 else 0)
     
+    from collections import defaultdict
+    item_stats = defaultdict(int)
+    scans_with_items = db.query(models.ScanEvent.selected_items).filter(
+        models.ScanEvent.business_id == business.id,
+        models.ScanEvent.selected_items != None
+    ).all()
+    for scan in scans_with_items:
+        items = scan.selected_items or []
+        for item in items:
+            item_stats[item] += 1
+            
+    best_dish = "N/A"
+    if item_stats:
+        best_dish = max(item_stats.items(), key=lambda x: x[1])[0]
+    elif business.signature_dish:
+        best_dish = business.signature_dish
+
     return {
         "reviews_collected": cur_reviews,
         "avg_rating": round(cur_avg, 1),
-        "best_dish": "Pizza" if not business.signature_dish else business.signature_dish, # Simplification
-        "best_day": "Saturday",
+        "best_dish": best_dish,
+        "best_day": "Saturday", # Let's also fix this later if needed, but the user specifically asked for Pizza
         "conversion_rate": round(cur_conv, 1),
         "vs_last_month_percentage": round(change, 1)
     }
