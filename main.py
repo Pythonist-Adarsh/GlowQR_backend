@@ -11,6 +11,8 @@ from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from database import engine, get_db
 import models, security
 from middleware.rate_limit import setup_rate_limiting
+from apscheduler.schedulers.background import BackgroundScheduler
+from jobs.daily_sync import run_daily_sync
 
 # Import routers
 from routers.auth import router as auth_router
@@ -27,6 +29,18 @@ load_dotenv(override=True)
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="GlowQR API")
+
+scheduler = BackgroundScheduler()
+
+@app.on_event("startup")
+def start_scheduler():
+    scheduler.add_job(run_daily_sync, 'cron', hour=7, minute=0)
+    scheduler.start()
+    print("Daily sync scheduler started (7 AM)")
+
+@app.on_event("shutdown")
+def stop_scheduler():
+    scheduler.shutdown()
 
 app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
 

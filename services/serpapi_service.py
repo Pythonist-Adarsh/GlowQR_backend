@@ -16,15 +16,17 @@ def fetch_place_details(place_id: str):
         # Match "1s0x...:0x..."
         match = re.search(r'1s(0x[0-9a-f]+:0x[0-9a-f]+)', place_id)
         if match:
-            place_id = match.group(1)
+            place_id = "!4m2!3m1!1s" + match.group(1)
         else:
             print(f"Could not extract data_id from URL: {place_id}")
             return None
+    elif place_id.startswith("0x"):
+        place_id = "!4m2!3m1!1s" + place_id
 
     params = {
         "engine": "google_maps",
         "type": "place",
-        "data_id": place_id,
+        "data": place_id,
         "api_key": api_key,
     }
 

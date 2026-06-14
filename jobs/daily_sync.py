@@ -72,7 +72,7 @@ def run_daily_sync():
 
                 db.commit()
 
-                print(f"[SUCCESS] {biz.name}: {current_rating}★ | {current_count} reviews (+{new_reviews} since baseline)")
+                print(f"[SUCCESS] {biz.name}: {current_rating} stars | {current_count} reviews (+{new_reviews} since baseline)")
                 synced += 1
 
             except Exception as e:

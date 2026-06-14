@@ -24,14 +24,15 @@ async def get_current_user(authorization: str = Header(...), db: Session = Depen
     if not user or not user.is_active:
         raise HTTPException(status_code=401, detail="User not found")
     
-    if user.plan == 'trial' and user.trial_ends_at and user.trial_ends_at < datetime.now(timezone.utc):
+    if (user.plan or 'expired').lower() == 'trial' and user.trial_ends_at and user.trial_ends_at < datetime.now(timezone.utc):
         user.plan = 'expired'
         db.commit()
     
     return user
 
 def require_basic(current_user: User = Depends(get_current_user)):
-    if current_user.plan not in ['trial', 'basic', 'premium']:
+    plan = (current_user.plan or 'expired').lower()
+    if plan not in ['trial', 'basic', 'premium']:
         raise HTTPException(
             status_code=403,
             detail={
@@ -44,7 +45,8 @@ def require_basic(current_user: User = Depends(get_current_user)):
     return current_user
 
 def require_premium(current_user: User = Depends(get_current_user)):
-    if current_user.plan not in ['trial', 'premium']:
+    plan = (current_user.plan or 'expired').lower()
+    if plan not in ['trial', 'premium']:
         raise HTTPException(
             status_code=403,
             detail={

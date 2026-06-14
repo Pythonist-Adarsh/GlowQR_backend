@@ -21,3 +21,4 @@ Pillow
 qrcode
 PyJWT
 reportlab
+apscheduler
