@@ -61,6 +61,7 @@ def step_1(data: schemas.OnboardingStep1, db: Session = Depends(get_db), current
     business.place_id = data.place_id
     business.google_rating = data.google_rating
     business.review_count = data.review_count
+    business.baseline_review_count = data.review_count
     business.slug = slug
     business.onboarding_step = max(business.onboarding_step, 1)
     

@@ -66,7 +66,8 @@ class Business(Base):
     instagram_url = Column(String, nullable=True)
     google_rating = Column(Float, nullable=True)
     review_count = Column(Integer, nullable=True)
-    last_google_sync = Column(DateTime(timezone=True), nullable=True)
+    baseline_review_count = Column(Integer, nullable=True)
+    last_synced_at = Column(DateTime(timezone=True), nullable=True)
     
     # Branding
     logo_url = Column(String, nullable=True)

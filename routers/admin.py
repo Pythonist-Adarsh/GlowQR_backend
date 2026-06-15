@@ -12,6 +12,16 @@ from services.email_service import send_activation_email, send_rejection_email
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
 
+@router.post("/sync-now")
+def trigger_sync_now(x_admin_key: str = Header(None)):
+    # Fallback to a hardcoded key if env var isn't set, for safety
+    expected_key = os.environ.get("ADMIN_API_KEY", "super-secret-admin-key")
+    if x_admin_key != expected_key:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    
+    from jobs.daily_sync import sync_all_businesses
+    return sync_all_businesses()
+
 import jwt
 from passlib.context import CryptContext
 

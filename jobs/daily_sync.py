@@ -10,19 +10,19 @@ from database import SessionLocal
 import models
 from services.serpapi_service import fetch_place_details
 
-def run_daily_sync():
+def sync_all_businesses():
     print("Starting daily Google Maps sync...")
     db = SessionLocal()
     try:
-        businesses = db.query(models.Business).join(models.User).filter(
+        # Fetch ALL active businesses from DB
+        businesses = db.query(models.Business).filter(
             models.Business.place_id.isnot(None),
-            models.Business.place_id != '',
-            models.Business.is_onboarded == True,
-            models.User.plan.in_(['trial', 'basic', 'premium'])
+            models.Business.place_id != ''
         ).all()
 
         print(f"Found {len(businesses)} businesses to sync.")
         synced, failed = 0, 0
+        now_utc = datetime.now(timezone.utc)
 
         for biz in businesses:
             try:
@@ -34,45 +34,16 @@ def run_daily_sync():
 
                 current_rating = data["google_rating"]
                 current_count = data["review_count"]
-                
-                baseline_count = biz.review_count or 0
-                new_reviews = max(0, current_count - baseline_count)
-
-                # Save snapshot to history using SQLAlchemy ORM
-                # We check if there's already a snapshot today
-                now_utc = datetime.now(timezone.utc)
-                # Approximation: we can use UTC date for uniqueness in ORM
-                today = now_utc.date()
-                
-                # Check if entry exists for today
-                existing_history = db.query(models.GoogleRatingHistory).filter(
-                    models.GoogleRatingHistory.business_id == biz.id
-                ).all()
-                
-                # Manual filter for same day
-                today_history = [h for h in existing_history if h.fetched_at and h.fetched_at.date() == today]
-
-                if today_history:
-                    history = today_history[0]
-                    history.rating = current_rating
-                    history.review_count = current_count
-                else:
-                    history = models.GoogleRatingHistory(
-                        business_id=biz.id,
-                        rating=current_rating,
-                        review_count=current_count,
-                        fetched_at=now_utc
-                    )
-                    db.add(history)
 
                 # Update businesses table
                 biz.google_rating = current_rating
                 biz.review_count = current_count
-                biz.last_google_sync = now_utc
-
+                biz.last_synced_at = now_utc
+                # NEVER touch business.baseline_review_count
+                
                 db.commit()
 
-                print(f"[SUCCESS] {biz.name}: {current_rating} stars | {current_count} reviews (+{new_reviews} since baseline)")
+                print(f"[SUCCESS] {biz.name}: {current_rating} stars | {current_count} reviews")
                 synced += 1
 
             except Exception as e:
@@ -82,11 +53,12 @@ def run_daily_sync():
 
             time.sleep(1)  # 1 req/sec SerpAPI rate limit
 
-        print(f"\nDone: {synced} synced, {failed} failed")
-        return {"synced": synced, "failed": failed}
+        timestamp_str = now_utc.strftime("%Y-%m-%d %H:%M:%S UTC")
+        print(f"\nSynced {synced} businesses at {timestamp_str}. Failed: {failed}")
+        return {"synced": synced, "failed": failed, "timestamp": timestamp_str, "status": "success"}
 
     finally:
         db.close()
 
 if __name__ == "__main__":
-    run_daily_sync()
+    sync_all_businesses()

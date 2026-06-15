@@ -12,7 +12,7 @@ from database import engine, get_db
 import models, security
 from middleware.rate_limit import setup_rate_limiting
 from apscheduler.schedulers.background import BackgroundScheduler
-from jobs.daily_sync import run_daily_sync
+from jobs.daily_sync import sync_all_businesses
 
 # Import routers
 from routers.auth import router as auth_router
@@ -34,9 +34,9 @@ scheduler = BackgroundScheduler()
 
 @app.on_event("startup")
 def start_scheduler():
-    scheduler.add_job(run_daily_sync, 'cron', hour=7, minute=0)
+    scheduler.add_job(sync_all_businesses, 'cron', hour=3, minute=0, timezone='Asia/Kolkata')
     scheduler.start()
-    print("Daily sync scheduler started (7 AM)")
+    print("Daily sync scheduler started (3:00 AM IST)")
 
 @app.on_event("shutdown")
 def stop_scheduler():

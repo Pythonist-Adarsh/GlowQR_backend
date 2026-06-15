@@ -961,70 +961,28 @@ def get_reviews_data(user: models.User = Depends(require_basic), db: Session = D
     business = get_business(user, db)
     bid = business.id
 
-    # Baseline: first entry in history
-    baseline = db.query(models.GoogleRatingHistory).filter(
-        models.GoogleRatingHistory.business_id == bid
-    ).order_by(models.GoogleRatingHistory.fetched_at.asc()).first()
-
-    baseline_rating = float(baseline.rating) if baseline and baseline.rating is not None \
-                      else float(business.google_rating) if business.google_rating is not None else None
-    baseline_count = baseline.review_count if baseline and baseline.review_count is not None \
-                     else business.review_count if business.review_count is not None else None
-
-    current_rating = float(business.google_rating) if business.google_rating is not None else None
-    current_count = business.review_count
-
-    new_reviews_since_glowqr = max(0, (current_count or 0) - (baseline_count or 0)) \
-                               if current_count is not None and baseline_count is not None else None
-
-    rating_improvement = round(current_rating - baseline_rating, 1) \
-                         if (current_rating is not None and baseline_rating is not None) else 0.0
-
     total_scans = db.query(models.ScanEvent).filter(models.ScanEvent.business_id == bid).count()
     redirected_count = db.query(models.ScanEvent).filter(
         models.ScanEvent.business_id == bid,
         models.ScanEvent.redirected_to_google == True
     ).count()
-    confirmed_posted = db.query(models.ScanEvent).filter(
-        models.ScanEvent.business_id == bid,
-        models.ScanEvent.stage == 'confirmed_posted'
-    ).count()
-
-    only_scanned = max(0, (total_scans or 0) - (redirected_count or 0))
-
-    trend = db.query(models.GoogleRatingHistory).filter(
-        models.GoogleRatingHistory.business_id == bid
-    ).order_by(models.GoogleRatingHistory.fetched_at.asc()).all()
-
-    # Create distinct dates for trend
-    trend_dict = {}
-    for r in trend:
-        if r.fetched_at:
-            d_str = r.fetched_at.date().isoformat()
-            trend_dict[d_str] = {
-                "date": d_str,
-                "rating": float(r.rating) if r.rating is not None else None,
-                "review_count": r.review_count
-            }
+    
+    baseline_count = business.baseline_review_count or 0
+    current_count = business.review_count or 0
+    reviews_gained = max(0, current_count - baseline_count)
+    
+    only_scanned = max(0, total_scans - redirected_count)
+    redirect_rate = round((redirected_count / total_scans * 100), 1) if total_scans > 0 else 0
 
     return {
-        "tracking": {
-            "total_scans": total_scans,
-            "redirected_to_google": redirected_count,
-            "only_scanned_not_opened": only_scanned,
-            "self_reported_posted": confirmed_posted,
-            "redirect_rate_pct": round((redirected_count / total_scans * 100), 1) if total_scans else 0,
-        },
-        "google_data": {
-            "current_rating": current_rating,
-            "current_review_count": current_count,
-            "baseline_rating": baseline_rating,
-            "baseline_review_count": baseline_count,
-            "new_reviews_since_glowqr": new_reviews_since_glowqr,
-            "rating_improvement": rating_improvement,
-            "last_synced": business.last_google_sync.isoformat() if business.last_google_sync else None,
-            "has_place_id": bool(business.place_id),
-        },
-        "rating_trend": list(trend_dict.values()),
-        "glowqr_joined": business.created_at.isoformat() if business.created_at else None,
+        "total_scans": total_scans,
+        "redirected_to_google": redirected_count,
+        "redirect_rate": redirect_rate,
+        "google_rating": business.google_rating,
+        "review_count_now": current_count,
+        "baseline_review_count": baseline_count,
+        "reviews_gained": reviews_gained,
+        "last_synced_at": business.last_synced_at.isoformat() if business.last_synced_at else None,
+        "has_place_id": bool(business.place_id),
+        "only_scanned_not_opened": only_scanned
     }
