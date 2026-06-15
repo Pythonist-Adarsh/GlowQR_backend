@@ -21,6 +21,9 @@ class User(Base):
     trial_ends_at = Column(DateTime(timezone=True), nullable=True)
     razorpay_customer_id = Column(String, nullable=True)
     
+    # Auth Extensions
+    password_reset_at = Column(DateTime(timezone=True), nullable=True)
+    
     # Notifications & Preferences
     notif_new_review = Column(Boolean, default=True)
     notif_negative_alert = Column(Boolean, default=True)

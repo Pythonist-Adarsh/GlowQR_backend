@@ -58,6 +58,26 @@ def send_negative_feedback_alert(business_name: str, owner_email: str, rating: i
         """
     })
 
+def send_password_reset_email(email: str, reset_link: str):
+    try:
+        resend.Emails.send({
+            "from": "GlowQR <onboarding@resend.dev>",
+            "to": [email],
+            "subject": "Reset your GlowQR Password",
+            "html": f"""
+            <h2>Password Reset Request</h2>
+            <p>We received a request to reset your password for your GlowQR account.</p>
+            <p>Click the button below to choose a new password. This link is valid for 15 minutes.</p>
+            <br>
+            <a href="{reset_link}" style="background:#111111;color:white;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold;display:inline-block;">Reset Password</a>
+            <br><br>
+            <p>If you did not request a password reset, please ignore this email or reply to let us know.</p>
+            <p>Ã¢â‚¬â€  GlowQR Team</p>
+            """
+        })
+    except Exception as e:
+        print(f"Failed to send password reset email: {e}")
+
 def send_activation_email(user, business_name: str, plan: str, expires_at):
     try:
         resend.Emails.send({

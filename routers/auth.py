@@ -6,6 +6,9 @@ from database import get_db
 from dependencies import get_current_user
 import hashlib
 import secrets
+import os
+from jose import jwt, JWTError, ExpiredSignatureError
+from services.email_service import send_password_reset_email
 
 router = APIRouter(prefix="/api/auth", tags=["Auth"])
 
@@ -179,3 +182,53 @@ def update_password(pw_data: dict = Body(...), db: Session = Depends(get_db), cu
     current_user.hashed_password = security_auth.get_password_hash(new_pw)
     db.commit()
     return {"status": "ok"}
+
+RESET_TOKEN_SECRET = os.getenv("RESET_TOKEN_SECRET", os.getenv("SECRET_KEY", "supersecret"))
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://glow-qr-frontend.vercel.app")
+
+@router.post("/forgot-password")
+def forgot_password(req: schemas.ForgotPasswordRequest, db: Session = Depends(get_db)):
+    email_lower = req.email.lower()
+    user = db.query(models.User).filter(models.User.email.ilike(email_lower)).first()
+    
+    if user:
+        now = datetime.now(timezone.utc)
+        payload = {
+            "sub": user.email,
+            "user_id": user.id,
+            "iat": now,
+            "exp": now + timedelta(minutes=15)
+        }
+        token = jwt.encode(payload, RESET_TOKEN_SECRET, algorithm="HS256")
+        reset_link = f"{FRONTEND_URL}/reset-password?token={token}"
+        
+        send_password_reset_email(user.email, reset_link)
+        
+    return {"message": "Reset link sent if account exists"}
+
+@router.post("/reset-password")
+def reset_password(req: schemas.ResetPasswordRequest, db: Session = Depends(get_db)):
+    try:
+        payload = jwt.decode(req.token, RESET_TOKEN_SECRET, algorithms=["HS256"])
+        email = payload.get("sub")
+        iat = payload.get("iat")
+        if email is None or iat is None:
+            raise HTTPException(status_code=400, detail="Invalid token structure")
+    except ExpiredSignatureError:
+        raise HTTPException(status_code=400, detail="Token has expired")
+    except JWTError:
+        raise HTTPException(status_code=400, detail="Invalid token")
+
+    user = db.query(models.User).filter(models.User.email == email).first()
+    if not user:
+        raise HTTPException(status_code=400, detail="Invalid token")
+
+    token_iat_dt = datetime.fromtimestamp(iat, tz=timezone.utc)
+    if user.password_reset_at and user.password_reset_at > token_iat_dt:
+        raise HTTPException(status_code=400, detail="Token already used")
+
+    user.hashed_password = security_auth.get_password_hash(req.new_password)
+    user.password_reset_at = datetime.now(timezone.utc)
+    db.commit()
+
+    return {"message": "Password updated successfully"}
