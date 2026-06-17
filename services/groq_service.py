@@ -315,6 +315,25 @@ Output ONLY a valid JSON array of exactly 3 strings. No explanation, no markdown
             variants = []
         
         cleaned = [v.strip() for v in variants if isinstance(v, str) and len(v.strip()) > 10]
+
+        # POST-PROCESSING — Enforce correct category language
+        # GROQ pe depend nahi — code level pe fix karo
+        if place_word and place_word.lower() != "restaurant":
+            import re
+            non_dining = place_word.lower() not in ["restaurant", "fine dining"]
+            enforced = []
+            for review in cleaned:
+                fixed = review
+                # "restaurant" → correct place_word
+                fixed = re.sub(r'\brestaurant\b', place_word, fixed, flags=re.IGNORECASE)
+                # dinner/lunch only banned for non-dining categories
+                if non_dining:
+                    fixed = re.sub(r'\bdinner kiya\b', f'{place_word} visit kiya', fixed, flags=re.IGNORECASE)
+                    fixed = re.sub(r'\blunch kiya\b', f'{place_word} visit kiya', fixed, flags=re.IGNORECASE)
+                    fixed = re.sub(r'\bdinner\b', 'visit', fixed, flags=re.IGNORECASE)
+                    fixed = re.sub(r'\blunch\b', 'visit', fixed, flags=re.IGNORECASE)
+                enforced.append(fixed)
+            cleaned = enforced
         
         while len(cleaned) < variant_count:
             lang = 'hinglish' if (plan == 'premium' and len(cleaned) >= 3) else 'english'
