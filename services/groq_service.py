@@ -7,54 +7,47 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
-SYSTEM_PROMPT = """You are generating Google reviews on behalf of real customers 
-for a local Indian business. 
+SYSTEM_PROMPT = """You are generating Google reviews on behalf of real customers for a local Indian business.
 
-Your goal is to write reviews that:
-1. Sound 100% human — like a real customer typed it on 
-   their phone after visiting
-2. Are unique every single time — never repeat phrases, 
-   structure, or sentence patterns
-3. Include natural SEO signals — location, service, 
-   category — woven into the review as a human would 
-   mention them, not as keywords
-4. Pass Google's review authenticity filters
-5. Help the business rank locally on Google Maps
+GOAL: Every review must feel like a DIFFERENT real human typed it on their phone after genuinely visiting.
 
-STRICT RULES:
-- Never use: amazing, fantastic, outstanding, exceptional, 
-  stellar, top-notch, world-class, incredible, superb
-- Never start all reviews with "I visited" or "I went"
-- Vary sentence length — mix short and long sentences
-- Include small specific details (time of day, occasion, 
-  what they bought, staff name if given, wait time)
-- Each review must feel like a DIFFERENT person wrote it
-  with a different personality and writing style
+BANNED WORDS — NEVER use these:
+amazing, fantastic, outstanding, exceptional, stellar, top-notch, world-class, incredible, superb, awesome, wonderful, brilliant, excellent, perfect, fabulous, "must try", "new favorite", "will definitely come back", "highly recommend", "great place", "best place", "loved it", "so good", "so tasty"
 
-Business details you will receive:
-- business_name
-- business_category  
-- business_location (city/area)
-- specific_services (if provided)
-- session_id (use as randomness seed — never output this)
+PERSONALITY MATRIX — each review is a different human:
+Review 1 → BRIEF & CASUAL: 1-2 short sentences only. Like a busy person leaving a quick note.
+Review 2 → STORYTELLER: Mentions occasion or context (birthday, lunch break, date night, came with friends). 3-4 sentences with one small personal detail.
+Review 3 → SLIGHTLY CRITICAL but positive overall: Mentions ONE small neutral thing (waited a bit, was crowded, parking was tricky) but still recommends. Most natural-sounding review.
+Review 4 → FOOD-FOCUSED: Talks about specific taste/texture/presentation. Does NOT mention city name at all.
+Review 5 → SERVICE/VIBE-FOCUSED: Talks about staff, ambiance, seating, speed. Does NOT mention any specific dish.
+
+ANTI-SPAM RULES — Google filter ke liye:
+1. City name: mention in MAX 2 out of 5 reviews — never in every review
+2. Business name: use in MAX 3 out of 5 reviews — others say "this place" or "they"
+3. Dish names: each dish mentioned MAX once across all 5 reviews
+4. Sentence starters: all 5 must start with a different word — no two reviews same opening
+5. Length variation: mix 1-sentence, 2-sentence, 3-4 sentence reviews — never all same length
+6. Zero repeated phrases across the 5 reviews
+7. If rating is 4/5 — at least 1 review mentions something slightly imperfect naturally
+8. SEO keywords (location/category) only in reviews 4 or 5, woven naturally
 """
 
 def get_fallback_review(business_name: str, language: str, index: int) -> str:
     name = business_name or 'this place'
     fallbacks = {
         'english': [
-            f"Really enjoyed my time at {name}. Everything was good. Will be back.",
-            f"Good experience at {name}. Food and service were solid.",
-            f"Visited {name} recently. Nice ambiance and most of what we tried was pretty good.",
-            f"A solid choice for dining out. {name} has good portions and fair prices.",
-            f"Enjoyed the meal at {name}. Would visit again when in the area."
+            f"Came here on a whim and left happy. {name} is worth the visit.",
+            f"Service was quick and the food was fresh. Pretty good overall.",
+            f"Decent spot. Was a bit busy when we went but the food made up for the wait.",
+            f"Tried a few things off the menu — most were solid. Will probably stop by again.",
+            f"Nice place to hang out. Staff were friendly and didn't rush us."
         ],
         'hinglish': [
-            f"{name} mein experience kaafi theek raha. Khana acha tha.",
-            f"{name} mein khana decent tha. Service bhi achi thi.",
-            f"Sach mein, {name} ne disappoint nahi kiya. Khana solid tha.",
-            f"Maza aaya {name} aakar. Worth the price.",
-            f"{name} theek hai, try kar sakte ho."
+            f"{name} ne genuinely surprise kar diya. Khana fresh tha aur price bhi reasonable.",
+            f"Service thodi slow thi but khana worth it tha. Overall experience acha raha.",
+            f"Friends ke saath gaye the, sab ko pasand aaya. Dobara jaenge.",
+            f"Taste mein koi compromise nahi. Ek baar try karna chahiye.",
+            f"Ambiance acha hai, staff helpful tha. Solid evening rahi."
         ]
     }
     options = fallbacks.get(language.lower(), fallbacks['english'])
@@ -72,70 +65,76 @@ async def generate_reviews(
 ) -> list[str]:
     
     business_location = city or "their city"
-    services_str = ", ".join(selected_items) if selected_items else "general service"
+    items_list = selected_items[:3] if selected_items else []
+    services_str = ", ".join(items_list) if items_list else "general experience"
+
+    if overall_rating == 5:
+        rating_instruction = "All reviews are positive. But vary tone — not everyone is equally enthusiastic."
+    elif overall_rating == 4:
+        rating_instruction = "Reviews are positive but at least 1 must mention a minor imperfection naturally."
+    else:
+        rating_instruction = "Reviews are mixed. 2-3 positive, 1-2 mentioning specific issues politely."
 
     if plan == 'premium':
         user_prompt = f"""
 Business Details:
-- business_name: {business_name}
-- business_category: {category}
-- business_location: {business_location}
-- specific_services: {services_str}
-- session_id: {session_id}
+- Name: {business_name}
+- Category: {category}
+- City: {business_location}
+- Menu items to reference (use sparingly, max once each): {services_str}
+- Session seed (do not output): {session_id}
+- Customer rating: {overall_rating}/5
 
-Generate exactly 5 reviews based on an overall rating of {overall_rating}/5.
+{rating_instruction}
 
-CRITICAL INSTRUCTION FOR ALL REVIEWS:
-Every single review MUST naturally weave in:
-1. The location ({business_location})
-2. The business category ({category})
-3. At least one of the specific items/services ({services_str})
-This is to highlight the business for local SEO.
+Generate exactly 5 reviews following the PERSONALITY MATRIX:
+Review 1 → BRIEF & CASUAL (English)
+Review 2 → STORYTELLER (English)
+Review 3 → SLIGHTLY CRITICAL but recommends (English)
+Review 4 → FOOD-FOCUSED, NO city name (Hinglish) — include SEO: "best {category} near me" naturally
+Review 5 → SERVICE/VIBE-FOCUSED, NO dish names (Hinglish) — include SEO: "best {category} in {business_location}" naturally
 
-MIX REQUIRED:
-REVIEW 1, 2, 3 — Normal English
-- Simple, friendly, easy to understand
-- Written for Indian readers — short sentences
-- Conversational tone like texting a friend
+CHECKLIST before outputting:
+- No two reviews start with the same word
+- City name in MAX 2 reviews
+- Business name in MAX 3 reviews
+- No dish mentioned more than once across all 5
+- No banned words used
+- Lengths vary across all 5
 
-REVIEW 4 — Hinglish (Hindi + English mix)
-- Natural mix like Indian people actually talk
-- MUST include local SEO phrase: "best {category} near me"
-
-REVIEW 5 — Hinglish (Hindi + English mix)  
-- MUST include location-based SEO phrase: "best {category} in {business_location}"
-
-Output ONLY a JSON array of exactly 5 strings:
-["review 1 text", "review 2 text", "review 3 text", "review 4 text", "review 5 text"]
+Output ONLY a valid JSON array of exactly 5 strings. No explanation, no markdown:
+["review1", "review2", "review3", "review4", "review5"]
 """
         variant_count = 5
     else:
         user_prompt = f"""
 Business Details:
-- business_name: {business_name}
-- business_category: {category}
-- business_location: {business_location}
-- specific_services: {services_str}
-- session_id: {session_id}
+- Name: {business_name}
+- Category: {category}
+- City: {business_location}
+- Menu items to reference (use sparingly, max once each): {services_str}
+- Session seed (do not output): {session_id}
+- Customer rating: {overall_rating}/5
 
-Generate exactly 5 reviews based on an overall rating of {overall_rating}/5.
+{rating_instruction}
 
-CRITICAL INSTRUCTION FOR ALL REVIEWS:
-Every single review MUST naturally weave in:
-1. The location ({business_location})
-2. The business category ({category})
-3. At least one of the specific items/services ({services_str})
-This is to highlight the business for local SEO.
+Generate exactly 3 reviews following the PERSONALITY MATRIX:
+Review 1 → BRIEF & CASUAL (English)
+Review 2 → STORYTELLER (English)
+Review 3 → SLIGHTLY CRITICAL but positive (English)
 
-ALL 5 REVIEWS — Normal English
-- Simple, friendly, easy to understand
-- Written for Indian readers — short sentences
-- Conversational tone like texting a friend
+CHECKLIST before outputting:
+- No two reviews start with the same word
+- City name in MAX 2 reviews
+- Business name in MAX 3 reviews
+- No dish mentioned more than once across all 3
+- No banned words used
+- Lengths vary across all 3
 
-Output ONLY a JSON array of exactly 5 strings:
-["review 1 text", "review 2 text", "review 3 text", "review 4 text", "review 5 text"]
+Output ONLY a valid JSON array of exactly 3 strings. No explanation, no markdown:
+["review1", "review2", "review3"]
 """
-        variant_count = 5
+        variant_count = 3
 
     try:
         response = client.chat.completions.create(
@@ -144,8 +143,8 @@ Output ONLY a JSON array of exactly 5 strings:
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": user_prompt}
             ],
-            temperature=0.9,
-            max_tokens=1500
+            temperature=0.95,
+            max_tokens=1800
         )
         text = response.choices[0].message.content.strip()
         
