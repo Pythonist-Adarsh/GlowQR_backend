@@ -243,11 +243,29 @@ async def generate_reviews(
     services_str = ", ".join(items_list) if items_list else "general experience"
 
     if overall_rating == 5:
-        rating_instruction = "All reviews are positive. But vary tone — not everyone is equally enthusiastic."
+        rating_instruction = "All reviews are positive. Vary tone — not everyone is equally enthusiastic."
     elif overall_rating == 4:
-        rating_instruction = "Reviews are positive but at least 1 must mention a minor imperfection naturally."
+        rating_instruction = "Reviews are mostly positive but at least 1 must mention a minor imperfection naturally."
+    elif overall_rating == 3:
+        rating_instruction = """Rating is 3/5 — average experience. Reviews must reflect this honestly:
+- 1 review: decent but nothing special, would try again maybe
+- 1 review: specific thing was good but something else disappointed
+- 1 review (if premium): neutral tone — not bad, not great
+- Do NOT make these sound positive. Honest, balanced, slightly underwhelmed tone."""
+    elif overall_rating == 2:
+        rating_instruction = """Rating is 2/5 — below average experience. Reviews must reflect genuine disappointment:
+- Mention specific issues (slow service, food quality, wait time, value for money)
+- Tone: disappointed but not aggressive — like a real customer who expected better
+- 1 review can say they might give it another chance, others are doubtful
+- Do NOT sugarcoat. These must read as genuinely critical reviews."""
+    elif overall_rating == 1:
+        rating_instruction = """Rating is 1/5 — very poor experience. Reviews must be clearly negative:
+- Strong disappointment — something went clearly wrong
+- Mention specific failures: cold food, rude staff, long wait, wrong order etc.
+- Tone: frustrated but still factual — not abusive, just honest and critical
+- Do NOT add any positive spin. These are genuine 1-star reviews."""
     else:
-        rating_instruction = "Reviews are mixed. 2-3 positive, 1-2 mentioning specific issues politely."
+        rating_instruction = "Reviews are positive. Vary tone naturally."
 
     if plan == 'premium':
         user_prompt = f"""
