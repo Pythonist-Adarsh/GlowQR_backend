@@ -152,6 +152,13 @@ ANTI-SPAM RULES — Google filter ke liye:
 6. Zero repeated phrases across the 5 reviews
 7. If rating is 4/5 — at least 1 review mentions something slightly imperfect naturally
 8. SEO keywords (location/category) only in reviews 4 or 5, woven naturally
+
+CATEGORY-SPECIFIC LANGUAGE — HIGHEST PRIORITY RULE:
+- You will receive a place_word in every request indicating the exact business type
+- The word "restaurant" must NEVER appear in any review unless place_word is literally "restaurant"
+- The words "dinner" and "lunch" must NEVER appear unless place_word is "restaurant" or "fine dining"
+- Always use the exact place_word provided — if place_word is "food court", write "food court" everywhere, never "restaurant"
+- This rule overrides everything else — no exceptions whatsoever
 """
 
 def get_fallback_review(business_name: str, language: str, index: int) -> str:
@@ -213,6 +220,7 @@ Business Details:
 {rating_instruction}
 
 CATEGORY RULES — STRICTLY FOLLOW (NO EXCEPTIONS):
+⚠️ OVERRIDE: place_word = "{place_word}" — use this exact word in all reviews, the word "restaurant" is completely forbidden in this entire response unless place_word is restaurant
 - This business is a "{category}" — it is a {place_word}
 - The word "restaurant" is COMPLETELY BANNED in all reviews unless {place_word} is literally "restaurant"
 - The word "dinner" is COMPLETELY BANNED in all reviews unless {place_word} is "restaurant" or "fine dining"
@@ -253,6 +261,7 @@ Business Details:
 {rating_instruction}
 
 CATEGORY RULES — STRICTLY FOLLOW (NO EXCEPTIONS):
+⚠️ OVERRIDE: place_word = "{place_word}" — use this exact word in all reviews, the word "restaurant" is completely forbidden in this entire response unless place_word is restaurant
 - This business is a "{category}" — it is a {place_word}
 - The word "restaurant" is COMPLETELY BANNED in all reviews unless {place_word} is literally "restaurant"
 - The word "dinner" is COMPLETELY BANNED in all reviews unless {place_word} is "restaurant" or "fine dining"
