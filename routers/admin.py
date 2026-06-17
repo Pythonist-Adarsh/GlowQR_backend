@@ -609,3 +609,32 @@ def get_business_admin_detail(business_id: int, db: Session = Depends(get_db), v
         "bomb_alerts_summary": bomb_alerts_summary,
         "session_stats": session_stats
     }
+
+@router.delete("/user/{user_id}")
+def delete_user(user_id: int, db: Session = Depends(get_db), verified: bool = Depends(verify_admin)):
+    usr = db.query(models.User).filter(models.User.id == user_id).first()
+    if not usr:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    bus_ids = [b.id for b in db.query(models.Business.id).filter(models.Business.owner_id == user_id).all()]
+
+    if bus_ids:
+        db.query(models.NegativeFeedback).filter(models.NegativeFeedback.business_id.in_(bus_ids)).delete(synchronize_session=False)
+        db.query(models.BombAlert).filter(models.BombAlert.business_id.in_(bus_ids)).delete(synchronize_session=False)
+        db.query(models.ScanSession).filter(models.ScanSession.business_id.in_(bus_ids)).delete(synchronize_session=False)
+        db.query(models.ScanEvent).filter(models.ScanEvent.business_id.in_(bus_ids)).delete(synchronize_session=False)
+        db.query(models.DailyAnalytics).filter(models.DailyAnalytics.business_id.in_(bus_ids)).delete(synchronize_session=False)
+        db.query(models.AIAnalyticsCache).filter(models.AIAnalyticsCache.business_id.in_(bus_ids)).delete(synchronize_session=False)
+        db.query(models.GoogleRatingHistory).filter(models.GoogleRatingHistory.business_id.in_(bus_ids)).delete(synchronize_session=False)
+        db.query(models.MenuItem).filter(models.MenuItem.business_id.in_(bus_ids)).delete(synchronize_session=False)
+        db.query(models.QRCode).filter(models.QRCode.business_id.in_(bus_ids)).delete(synchronize_session=False)
+        db.query(models.OnboardingRecord).filter(models.OnboardingRecord.business_id.in_(bus_ids)).delete(synchronize_session=False)
+        db.query(models.Business).filter(models.Business.owner_id == user_id).delete(synchronize_session=False)
+
+    db.query(models.Subscription).filter(models.Subscription.user_id == user_id).delete(synchronize_session=False)
+    db.query(models.UpgradeRequest).filter(models.UpgradeRequest.user_id == user_id).delete(synchronize_session=False)
+    db.query(models.RefreshToken).filter(models.RefreshToken.user_id == user_id).delete(synchronize_session=False)
+    db.query(models.User).filter(models.User.id == user_id).delete(synchronize_session=False)
+
+    db.commit()
+    return {"success": True, "message": "User and all associated data deleted"}
