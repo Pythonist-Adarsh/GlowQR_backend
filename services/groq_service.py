@@ -7,6 +7,128 @@ from dotenv import load_dotenv
 load_dotenv(override=True)
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
 
+CATEGORY_LANGUAGE_MAP = {
+    "restaurant": {
+        "place_word": "restaurant",
+        "visit_word": "dined",
+        "experience_words": ["meal", "food", "dish", "dinner", "lunch"],
+        "avoid_words": ["appointment", "session", "treatment", "stay"],
+    },
+    "cafe / coffee shop": {
+        "place_word": "cafe",
+        "visit_word": "stopped by",
+        "experience_words": ["coffee", "brew", "snack", "pastry", "sitting area"],
+        "avoid_words": ["dinner", "meal", "appointment", "session", "treatment"],
+    },
+    "fast food / qsr": {
+        "place_word": "place",
+        "visit_word": "grabbed a quick bite at",
+        "experience_words": ["order", "combo", "quick meal", "takeaway"],
+        "avoid_words": ["dinner", "appointment", "session", "treatment"],
+    },
+    "bar / lounge": {
+        "place_word": "lounge",
+        "visit_word": "visited",
+        "experience_words": ["drinks", "cocktails", "vibe", "music", "crowd"],
+        "avoid_words": ["meal", "appointment", "session", "treatment"],
+    },
+    "bakery / dessert shop": {
+        "place_word": "bakery",
+        "visit_word": "visited",
+        "experience_words": ["dessert", "cake", "pastry", "sweet", "baked goods"],
+        "avoid_words": ["dinner", "appointment", "session", "treatment"],
+    },
+    "food court": {
+        "place_word": "food court",
+        "visit_word": "visited",
+        "experience_words": ["stall", "counter", "food", "order", "variety", "quick bite"],
+        "avoid_words": ["dinner reservation", "appointment", "session", "treatment", "restaurant"],
+    },
+    "fine dining": {
+        "place_word": "restaurant",
+        "visit_word": "dined",
+        "experience_words": ["course", "plating", "ambiance", "wine", "reservation"],
+        "avoid_words": ["appointment", "session", "treatment", "quick bite"],
+    },
+    "food truck": {
+        "place_word": "food truck",
+        "visit_word": "stopped by",
+        "experience_words": ["street food", "quick bite", "fresh off the truck", "order"],
+        "avoid_words": ["dinner", "reservation", "appointment", "session", "restaurant"],
+    },
+    "cloud kitchen": {
+        "place_word": "place",
+        "visit_word": "ordered from",
+        "experience_words": ["delivery", "packaging", "order", "food", "arrived hot"],
+        "avoid_words": ["ambiance", "seating", "appointment", "session", "treatment"],
+    },
+    "salon": {
+        "place_word": "salon",
+        "visit_word": "visited",
+        "experience_words": ["haircut", "styling", "color", "treatment", "stylist", "blow dry"],
+        "avoid_words": ["food", "meal", "dinner", "dish", "order"],
+    },
+    "spa": {
+        "place_word": "spa",
+        "visit_word": "visited",
+        "experience_words": ["massage", "treatment", "relaxing session", "therapist", "ambiance"],
+        "avoid_words": ["food", "meal", "dinner", "dish", "order", "haircut"],
+    },
+    "gym": {
+        "place_word": "gym",
+        "visit_word": "joined",
+        "experience_words": ["equipment", "trainer", "workout", "session", "facilities"],
+        "avoid_words": ["food", "meal", "dinner", "dish", "order", "haircut"],
+    },
+    "retail": {
+        "place_word": "store",
+        "visit_word": "shopped at",
+        "experience_words": ["product", "collection", "staff helped", "variety", "purchase"],
+        "avoid_words": ["food", "meal", "dinner", "dish", "appointment", "treatment"],
+    },
+    "bridal & festive jewellery": {
+        "place_word": "store",
+        "visit_word": "visited",
+        "experience_words": ["collection", "jewellery", "designs", "staff helped", "occasion"],
+        "avoid_words": ["food", "meal", "dinner", "dish", "treatment"],
+    },
+    "hotel": {
+        "place_word": "hotel",
+        "visit_word": "stayed at",
+        "experience_words": ["room", "stay", "check-in", "housekeeping", "facilities"],
+        "avoid_words": ["appointment", "session", "haircut", "treatment"],
+    },
+    "medical": {
+        "place_word": "clinic",
+        "visit_word": "visited",
+        "experience_words": ["doctor", "staff", "consultation", "waiting time", "cleanliness"],
+        "avoid_words": ["food", "meal", "dinner", "dish", "haircut"],
+    },
+    "education": {
+        "place_word": "institute",
+        "visit_word": "enrolled at",
+        "experience_words": ["faculty", "course", "classes", "learning", "environment"],
+        "avoid_words": ["food", "meal", "dinner", "dish", "treatment", "haircut"],
+    },
+    "other": {
+        "place_word": "place",
+        "visit_word": "visited",
+        "experience_words": ["service", "staff", "experience", "quality", "value"],
+        "avoid_words": [],
+    },
+}
+
+def get_category_context(category: str) -> dict:
+    if not category:
+        return CATEGORY_LANGUAGE_MAP["other"]
+    category_lower = category.lower().strip()
+    if category_lower in CATEGORY_LANGUAGE_MAP:
+        return CATEGORY_LANGUAGE_MAP[category_lower]
+    for key in CATEGORY_LANGUAGE_MAP:
+        if key in category_lower or category_lower in key:
+            return CATEGORY_LANGUAGE_MAP[key]
+    return CATEGORY_LANGUAGE_MAP["other"]
+
 SYSTEM_PROMPT = """You are generating Google reviews on behalf of real customers for a local Indian business.
 
 GOAL: Every review must feel like a DIFFERENT real human typed it on their phone after genuinely visiting.
@@ -65,6 +187,9 @@ async def generate_reviews(
 ) -> list[str]:
     
     business_location = city or "their city"
+    cat_ctx = get_category_context(category)
+    place_word = cat_ctx["place_word"]
+    avoid_str = ", ".join(cat_ctx["avoid_words"]) if cat_ctx["avoid_words"] else "none"
     items_list = selected_items[:3] if selected_items else []
     services_str = ", ".join(items_list) if items_list else "general experience"
 
@@ -86,6 +211,12 @@ Business Details:
 - Customer rating: {overall_rating}/5
 
 {rating_instruction}
+
+CATEGORY RULES — STRICTLY FOLLOW:
+- This business is a "{category}" — specifically a {place_word}
+- NEVER use these words in any review: {avoid_str}
+- Use language natural to a {place_word} — not a generic restaurant
+- SEO lines must say "{category}" not "restaurant"
 
 Generate exactly 5 reviews following the PERSONALITY MATRIX:
 Review 1 → BRIEF & CASUAL (English)
@@ -117,6 +248,12 @@ Business Details:
 - Customer rating: {overall_rating}/5
 
 {rating_instruction}
+
+CATEGORY RULES — STRICTLY FOLLOW:
+- This business is a "{category}" — specifically a {place_word}
+- NEVER use these words in any review: {avoid_str}
+- Use language natural to a {place_word} — not a generic restaurant
+- SEO lines must say "{category}" not "restaurant"
 
 Generate exactly 3 reviews following the PERSONALITY MATRIX:
 Review 1 → BRIEF & CASUAL (English)
