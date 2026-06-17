@@ -200,6 +200,42 @@ async def generate_reviews(
 ) -> list[str]:
     
     business_location = city or "their city"
+
+    import random
+    import time
+
+    _timestamp = int(time.time())
+    _rand_seed = random.randint(1000, 9999)
+
+    _openers = [
+        "Walked in without expectations",
+        "Heard about this place from a friend",
+        "Tried this on a whim",
+        "Been meaning to visit for a while",
+        "Stopped by after work",
+        "Came here after a long time",
+        "First time visiting",
+        "Was passing by and decided to check it out",
+        "My colleague suggested this place",
+        "Visited on a lazy Sunday",
+    ]
+    _storyteller_contexts = [
+        "anniversary dinner", "birthday celebration", "team lunch",
+        "date night", "family outing", "friend's get-together",
+        "office party", "cousin's visit", "college reunion", "casual hangout"
+    ]
+    _minor_issues = [
+        "parking was a bit of a hassle",
+        "the wait was slightly long",
+        "it was quite crowded when we went",
+        "seating took a few minutes",
+        "the queue was longer than expected",
+        "had to wait a bit for the order",
+    ]
+
+    _r1_opener = random.choice(_openers)
+    _r2_context = random.choice(_storyteller_contexts)
+    _r3_issue = random.choice(_minor_issues)
     cat_ctx = get_category_context(category)
     place_word = cat_ctx["place_word"]
     avoid_str = ", ".join(cat_ctx["avoid_words"]) if cat_ctx["avoid_words"] else "none"
@@ -235,10 +271,16 @@ CATEGORY RULES — STRICTLY FOLLOW (NO EXCEPTIONS):
 - SEO phrase in Review 4 must be exactly: "best {place_word} near me"
 - SEO phrase in Review 5 must be exactly: "best {place_word} in {business_location}"
 
-Generate exactly 5 reviews following the PERSONALITY MATRIX:
-Review 1 → BRIEF & CASUAL (English)
-Review 2 → STORYTELLER (English)
-Review 3 → SLIGHTLY CRITICAL but recommends (English)
+Generate exactly 5 reviews following the PERSONALITY MATRIX.
+Use these UNIQUE SEEDS for this scan — mandatory, do not ignore:
+- Scan ID: {_timestamp}-{_rand_seed}
+- Review 1 must start with or reference: "{_r1_opener}"
+- Review 2 occasion must be: "{_r2_context}"
+- Review 3 minor issue must mention: "{_r3_issue}"
+
+Review 1 → BRIEF & CASUAL (English) — opening: "{_r1_opener}..."
+Review 2 → STORYTELLER (English) — occasion context: "{_r2_context}"
+Review 3 → SLIGHTLY CRITICAL but recommends (English) — mention: "{_r3_issue}"
 Review 4 → FOOD-FOCUSED, NO city name (Hinglish) — include SEO phrase: "best {place_word} near me" — use "{place_word}" word exactly, never "restaurant"
 Review 5 → SERVICE/VIBE-FOCUSED, NO dish names (Hinglish) — include SEO phrase: "best {place_word} in {business_location}" — use "{place_word}" word exactly, never "restaurant"
 
@@ -276,10 +318,16 @@ CATEGORY RULES — STRICTLY FOLLOW (NO EXCEPTIONS):
 - SEO phrase in Review 4 must be exactly: "best {place_word} near me"
 - SEO phrase in Review 5 must be exactly: "best {place_word} in {business_location}"
 
-Generate exactly 3 reviews following the PERSONALITY MATRIX:
-Review 1 → BRIEF & CASUAL (English)
-Review 2 → STORYTELLER (English)
-Review 3 → SLIGHTLY CRITICAL but positive (English)
+Generate exactly 3 reviews following the PERSONALITY MATRIX.
+Use these UNIQUE SEEDS for this scan — mandatory, do not ignore:
+- Scan ID: {_timestamp}-{_rand_seed}
+- Review 1 must start with or reference: "{_r1_opener}"
+- Review 2 occasion must be: "{_r2_context}"
+- Review 3 minor issue must mention: "{_r3_issue}"
+
+Review 1 → BRIEF & CASUAL (English) — opening: "{_r1_opener}..."
+Review 2 → STORYTELLER (English) — occasion context: "{_r2_context}"
+Review 3 → SLIGHTLY CRITICAL but positive (English) — mention: "{_r3_issue}"
 
 CHECKLIST before outputting:
 - No two reviews start with the same word
