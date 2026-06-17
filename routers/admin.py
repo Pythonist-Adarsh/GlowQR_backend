@@ -9,6 +9,7 @@ from io import StringIO
 from datetime import datetime, timedelta, timezone
 from fastapi.responses import HTMLResponse, Response
 from services.email_service import send_activation_email, send_rejection_email
+from sqlalchemy import Integer, desc
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
 
@@ -437,3 +438,174 @@ async def trigger_daily_sync(
     from jobs.daily_sync import run_daily_sync
     background_tasks.add_task(run_daily_sync)
     return {"message": "Daily sync started in background"}
+
+@router.get("/top-businesses")
+def get_top_businesses(db: Session = Depends(get_db), verified: bool = Depends(verify_admin)):
+    results = db.query(
+        models.Business,
+        models.User.plan,
+        func.count(models.ScanEvent.id).label("total_scans"),
+        func.sum(func.cast(models.ScanEvent.redirected_to_google, Integer)).label("google_redirects")
+    ).outerjoin(models.ScanEvent, models.ScanEvent.business_id == models.Business.id)\
+     .outerjoin(models.User, models.User.id == models.Business.owner_id)\
+     .group_by(models.Business.id, models.User.plan)\
+     .order_by(desc("total_scans"))\
+     .limit(10)\
+     .all()
+    
+    top = []
+    for rank, (bus, plan, total_scans, google_redirects) in enumerate(results, start=1):
+        total_scans = total_scans or 0
+        google_redirects = google_redirects or 0
+        redirect_rate = (google_redirects / total_scans * 100) if total_scans > 0 else 0
+        top.append({
+            "id": bus.id,
+            "rank": rank,
+            "name": bus.name,
+            "category": bus.category,
+            "city": bus.city,
+            "plan": plan or "trial",
+            "total_scans": total_scans,
+            "google_redirects": google_redirects,
+            "redirect_rate_percent": round(redirect_rate, 1)
+        })
+    return {"top_businesses": top}
+
+@router.get("/business/{business_id}/detail")
+def get_business_admin_detail(business_id: int, db: Session = Depends(get_db), verified: bool = Depends(verify_admin)):
+    bus = db.query(models.Business).filter(models.Business.id == business_id).first()
+    if not bus:
+        raise HTTPException(status_code=404, detail="Business not found")
+        
+    usr = db.query(models.User).filter(models.User.id == bus.owner_id).first()
+    
+    business_info = {
+        "name": bus.name,
+        "slug": bus.slug,
+        "category": bus.category,
+        "city": bus.city,
+        "area": bus.area_locality,
+        "address": bus.address,
+        "phone": bus.phone_number,
+        "owner_email": bus.owner_email,
+        "owner_name": usr.full_name if usr else None,
+        "owner_phone": usr.phone if usr else None,
+        "plan": usr.plan if usr else "trial",
+        "trial_ends_at": usr.trial_ends_at if usr else None,
+        "google_rating": bus.google_rating,
+        "google_review_count": bus.review_count,
+        "baseline_review_count": bus.baseline_review_count,
+        "google_review_url": bus.google_review_url,
+        "tagline": bus.tagline,
+        "created_at": bus.created_at,
+        "is_onboarded": bus.is_onboarded,
+        "negative_filter_enabled": bus.negative_filter_enabled,
+        "whatsapp_alerts": usr.whatsapp_alerts if usr else False,
+        "notif_negative_alert": usr.notif_negative_alert if usr else False
+    }
+
+    total_scans = db.query(models.ScanEvent).filter(models.ScanEvent.business_id == business_id).count()
+    redirects = db.query(models.ScanEvent).filter(models.ScanEvent.business_id == business_id, models.ScanEvent.redirected_to_google == True).count()
+    reviews_generated = db.query(models.ScanEvent).filter(models.ScanEvent.business_id == business_id, models.ScanEvent.review_text.isnot(None)).count()
+    negative_scans = db.query(models.ScanEvent).filter(models.ScanEvent.business_id == business_id, models.ScanEvent.was_negative == True).count()
+    
+    avg_rating_row = db.query(func.avg(models.ScanEvent.overall_rating), func.avg(models.ScanEvent.time_spent_seconds)).filter(models.ScanEvent.business_id == business_id).first()
+    avg_overall_rating = avg_rating_row[0] if avg_rating_row and avg_rating_row[0] else 0
+    avg_time_spent = avg_rating_row[1] if avg_rating_row and avg_rating_row[1] else 0
+
+    now = datetime.now(timezone.utc)
+    scans_last_7 = db.query(models.ScanEvent).filter(models.ScanEvent.business_id == business_id, models.ScanEvent.scanned_at > now - timedelta(days=7)).count()
+    scans_last_30 = db.query(models.ScanEvent).filter(models.ScanEvent.business_id == business_id, models.ScanEvent.scanned_at > now - timedelta(days=30)).count()
+    last_scan = db.query(func.max(models.ScanEvent.scanned_at)).filter(models.ScanEvent.business_id == business_id).scalar()
+
+    scan_stats = {
+        "total_scans": total_scans,
+        "total_google_redirects": redirects,
+        "redirect_rate_percent": round((redirects/total_scans*100), 1) if total_scans > 0 else 0,
+        "reviews_generated": reviews_generated,
+        "reviews_copied_rate": round((reviews_generated/total_scans*100), 1) if total_scans > 0 else 0,
+        "avg_overall_rating": round(avg_overall_rating, 1),
+        "negative_scans": negative_scans,
+        "negative_rate_percent": round((negative_scans/total_scans*100), 1) if total_scans > 0 else 0,
+        "avg_time_spent_seconds": round(avg_time_spent, 1),
+        "scans_last_7_days": scans_last_7,
+        "scans_last_30_days": scans_last_30,
+        "last_scan_at": last_scan
+    }
+
+    rating_counts = db.query(models.ScanEvent.overall_rating, func.count(models.ScanEvent.id)).filter(models.ScanEvent.business_id == business_id, models.ScanEvent.overall_rating.isnot(None)).group_by(models.ScanEvent.overall_rating).all()
+    rd_dict = {f"{r}_star": 0 for r in range(1, 6)}
+    for r, c in rating_counts:
+        rd_dict[f"{r}_star"] = c
+
+    hour_counts = db.query(models.ScanEvent.hour_of_day, func.count(models.ScanEvent.id)).filter(models.ScanEvent.business_id == business_id, models.ScanEvent.hour_of_day.isnot(None)).group_by(models.ScanEvent.hour_of_day).order_by(desc(func.count(models.ScanEvent.id))).limit(5).all()
+    peak_hours = [{"hour": h, "scan_count": c} for h, c in hour_counts]
+
+    day_counts = db.query(models.ScanEvent.day_of_week, func.count(models.ScanEvent.id)).filter(models.ScanEvent.business_id == business_id, models.ScanEvent.day_of_week.isnot(None)).group_by(models.ScanEvent.day_of_week).all()
+    peak_days = [{"day": d, "scan_count": c} for d, c in day_counts]
+
+    all_selected = db.query(models.ScanEvent.selected_items).filter(models.ScanEvent.business_id == business_id, models.ScanEvent.selected_items.isnot(None)).all()
+    from collections import Counter
+    item_tally = Counter()
+    for row in all_selected:
+        if row[0]:
+            for item in row[0]:
+                item_tally[item] += 1
+    top_selected_items = [{"item": k, "count": v} for k, v in item_tally.most_common(5)]
+
+    neg_feedbacks = db.query(models.NegativeFeedback).filter(models.NegativeFeedback.business_id == business_id).all()
+    unresolved_neg = sum(1 for nf in neg_feedbacks if not nf.is_resolved)
+    last_neg = max((nf.created_at for nf in neg_feedbacks if nf.created_at), default=None)
+    
+    negative_feedback_summary = {
+        "total_negative": len(neg_feedbacks),
+        "unresolved": unresolved_neg,
+        "last_negative_at": last_neg
+    }
+
+    recent_negative = db.query(models.NegativeFeedback).filter(models.NegativeFeedback.business_id == business_id).order_by(models.NegativeFeedback.created_at.desc()).limit(5).all()
+    recent_negative_feedback = [{"rating": nf.rating, "feedback_text": nf.feedback_text, "created_at": nf.created_at, "is_resolved": nf.is_resolved} for nf in recent_negative]
+
+    grt = db.query(models.GoogleRatingHistory).filter(models.GoogleRatingHistory.business_id == business_id).order_by(models.GoogleRatingHistory.fetched_at.asc()).all()
+    google_rating_trend = [{"rating": g.rating, "review_count": g.review_count, "fetched_at": g.fetched_at} for g in grt]
+
+    da = db.query(models.DailyAnalytics).filter(models.DailyAnalytics.business_id == business_id, models.DailyAnalytics.date >= now - timedelta(days=30)).order_by(models.DailyAnalytics.date.asc()).all()
+    daily_scans_chart = [{"date": d.date.strftime("%Y-%m-%d") if d.date else None, "total_scans": d.total_scans, "google_redirects": d.google_redirects} for d in da]
+
+    bomb_alerts = db.query(models.BombAlert).filter(models.BombAlert.business_id == business_id).all()
+    unresolved_bombs = sum(1 for ba in bomb_alerts if not ba.is_resolved)
+    highest_risk = max((ba.risk_score for ba in bomb_alerts), default=0)
+    last_bomb = max((ba.triggered_at for ba in bomb_alerts if ba.triggered_at), default=None)
+
+    bomb_alerts_summary = {
+        "total_alerts": len(bomb_alerts),
+        "unresolved": unresolved_bombs,
+        "highest_risk_score": highest_risk,
+        "last_alert_at": last_bomb
+    }
+
+    sessions = db.query(models.ScanSession).filter(models.ScanSession.business_id == business_id).all()
+    flagged_sessions = sum(1 for s in sessions if s.is_flagged)
+    times = [s.time_to_rate_seconds for s in sessions if s.time_to_rate_seconds is not None]
+    avg_session_time = sum(times)/len(times) if times else 0
+
+    session_stats = {
+        "total_sessions": len(sessions),
+        "flagged_sessions": flagged_sessions,
+        "avg_time_to_rate": round(avg_session_time, 1)
+    }
+
+    return {
+        "business_info": business_info,
+        "scan_stats": scan_stats,
+        "rating_distribution": rd_dict,
+        "peak_hours": peak_hours,
+        "peak_days": peak_days,
+        "top_selected_items": top_selected_items,
+        "negative_feedback_summary": negative_feedback_summary,
+        "recent_negative_feedback": recent_negative_feedback,
+        "google_rating_trend": google_rating_trend,
+        "daily_scans_chart": daily_scans_chart,
+        "bomb_alerts_summary": bomb_alerts_summary,
+        "session_stats": session_stats
+    }
