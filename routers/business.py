@@ -177,3 +177,26 @@ def delete_qr_code(qr_id: int, db: Session = Depends(get_db), current_user: mode
     qr.is_active = False
     db.commit()
     return {"message": "QR deactivated"}
+
+@api_router.post("/sync-now")
+def sync_business_now(db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    business = db.query(models.Business).filter(models.Business.owner_id == current_user.id).first()
+    if not business:
+        raise HTTPException(status_code=404, detail="Business not found")
+        
+    if not business.place_id:
+        raise HTTPException(status_code=400, detail="Google Place ID not configured")
+        
+    from services.serpapi_service import fetch_place_details
+    from datetime import datetime, timezone
+    
+    data = fetch_place_details(business.place_id)
+    if not data:
+        raise HTTPException(status_code=500, detail="Failed to fetch data from Google Maps")
+        
+    business.google_rating = data["google_rating"]
+    business.review_count = data["review_count"]
+    business.last_synced_at = datetime.now(timezone.utc)
+    db.commit()
+    
+    return {"message": "Synced successfully", "review_count": business.review_count}
