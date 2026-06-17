@@ -212,18 +212,21 @@ Business Details:
 
 {rating_instruction}
 
-CATEGORY RULES — STRICTLY FOLLOW:
-- This business is a "{category}" — specifically a {place_word}
-- NEVER use these words in any review: {avoid_str}
-- Use language natural to a {place_word} — not a generic restaurant
-- SEO lines must say "{category}" not "restaurant"
+CATEGORY RULES — STRICTLY FOLLOW (NO EXCEPTIONS):
+- This business is a "{category}" — it is a {place_word}
+- The word "restaurant" is COMPLETELY BANNED in all reviews unless {place_word} is literally "restaurant"
+- The word "dinner" is COMPLETELY BANNED in all reviews unless {place_word} is "restaurant" or "fine dining"
+- NEVER use these words in ANY of the reviews: {avoid_str}
+- Every review must sound like a real customer of a {place_word} — not a restaurant customer
+- SEO phrase in Review 4 must be exactly: "best {place_word} near me"
+- SEO phrase in Review 5 must be exactly: "best {place_word} in {business_location}"
 
 Generate exactly 5 reviews following the PERSONALITY MATRIX:
 Review 1 → BRIEF & CASUAL (English)
 Review 2 → STORYTELLER (English)
 Review 3 → SLIGHTLY CRITICAL but recommends (English)
-Review 4 → FOOD-FOCUSED, NO city name (Hinglish) — include SEO: "best {category} near me" naturally
-Review 5 → SERVICE/VIBE-FOCUSED, NO dish names (Hinglish) — include SEO: "best {category} in {business_location}" naturally
+Review 4 → FOOD-FOCUSED, NO city name (Hinglish) — include SEO phrase: "best {place_word} near me" — use "{place_word}" word exactly, never "restaurant"
+Review 5 → SERVICE/VIBE-FOCUSED, NO dish names (Hinglish) — include SEO phrase: "best {place_word} in {business_location}" — use "{place_word}" word exactly, never "restaurant"
 
 CHECKLIST before outputting:
 - No two reviews start with the same word
@@ -249,11 +252,14 @@ Business Details:
 
 {rating_instruction}
 
-CATEGORY RULES — STRICTLY FOLLOW:
-- This business is a "{category}" — specifically a {place_word}
-- NEVER use these words in any review: {avoid_str}
-- Use language natural to a {place_word} — not a generic restaurant
-- SEO lines must say "{category}" not "restaurant"
+CATEGORY RULES — STRICTLY FOLLOW (NO EXCEPTIONS):
+- This business is a "{category}" — it is a {place_word}
+- The word "restaurant" is COMPLETELY BANNED in all reviews unless {place_word} is literally "restaurant"
+- The word "dinner" is COMPLETELY BANNED in all reviews unless {place_word} is "restaurant" or "fine dining"
+- NEVER use these words in ANY of the reviews: {avoid_str}
+- Every review must sound like a real customer of a {place_word} — not a restaurant customer
+- SEO phrase in Review 4 must be exactly: "best {place_word} near me"
+- SEO phrase in Review 5 must be exactly: "best {place_word} in {business_location}"
 
 Generate exactly 3 reviews following the PERSONALITY MATRIX:
 Review 1 → BRIEF & CASUAL (English)
