@@ -120,6 +120,7 @@ CATEGORY_LANGUAGE_MAP = {
 
 def get_category_context(category: str) -> dict:
     if not category:
+        print(f"[CRITICAL] get_category_context called with empty category — falling back to 'other'")
         return CATEGORY_LANGUAGE_MAP["other"]
     category_normalized = category.lower().strip().replace(" ", "").replace("-", "").replace("_", "")
     for key in CATEGORY_LANGUAGE_MAP:
@@ -130,6 +131,7 @@ def get_category_context(category: str) -> dict:
     for key in CATEGORY_LANGUAGE_MAP:
         if key in category_lower or category_lower in key:
             return CATEGORY_LANGUAGE_MAP[key]
+    print(f"[CRITICAL] Unrecognized category '{category}' — no match in CATEGORY_LANGUAGE_MAP, falling back to 'other'")
     return CATEGORY_LANGUAGE_MAP["other"]
 
 SYSTEM_PROMPT = """You are generating Google reviews on behalf of real customers for a local Indian business.
@@ -162,6 +164,7 @@ CATEGORY-SPECIFIC LANGUAGE — HIGHEST PRIORITY RULE:
 - The words "dinner" and "lunch" must NEVER appear unless place_word is "restaurant" or "fine dining"
 - Always use the exact place_word provided — if place_word is "food court", write "food court" everywhere, never "restaurant"
 - This rule overrides everything else — no exceptions whatsoever
+- Never mention the place_word (e.g. "food court", "salon") twice within the same sentence — use natural phrasing like "this place" or "here" for the second reference if needed
 """
 
 def get_fallback_review(business_name: str, language: str, index: int) -> str:
