@@ -233,9 +233,38 @@ async def generate_reviews(
         "had to wait a bit for the order",
     ]
 
+    _negative_experiences = [
+        "the food was cold when it arrived",
+        "the staff was quite inattentive",
+        "waited way too long for the order",
+        "the quality was not what I expected",
+        "got the wrong order and no one apologized",
+        "the place was not clean",
+        "very poor value for money",
+        "the staff was rude when we complained",
+    ]
+
+    _disappointed_closings = [
+        "probably won't be coming back",
+        "expected much better honestly",
+        "won't recommend this to friends",
+        "needs a lot of improvement",
+        "was really looking forward to it but left disappointed",
+        "hope they fix these issues",
+    ]
+
     _r1_opener = random.choice(_openers)
     _r2_context = random.choice(_storyteller_contexts)
     _r3_issue = random.choice(_minor_issues)
+
+    # Rating ke hisaab se seed pick karo
+    if overall_rating <= 2:
+        _r1_opener = random.choice(_negative_experiences)
+        _r2_context = random.choice(_disappointed_closings)
+        _r3_issue = random.choice(_negative_experiences + _disappointed_closings)
+    elif overall_rating == 3:
+        _r3_issue = random.choice(_minor_issues + _negative_experiences)
+        # _r1_opener and _r2_context already randomly picked above — keep them
     cat_ctx = get_category_context(category)
     place_word = cat_ctx["place_word"]
     avoid_str = ", ".join(cat_ctx["avoid_words"]) if cat_ctx["avoid_words"] else "none"
