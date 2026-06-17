@@ -320,10 +320,12 @@ Output ONLY a valid JSON array of exactly 3 strings. No explanation, no markdown
         import re
         _place = cat_ctx["place_word"]
         _non_dining = _place.lower() not in ["restaurant", "fine dining"]
+        print(f"[DEBUG] category={category}, place_word={_place}, non_dining={_non_dining}")
         enforced = []
         for review in cleaned:
             fixed = review
             fixed = re.sub(r'\brestaurant\b', _place, fixed, flags=re.IGNORECASE)
+            print(f"[DEBUG] BEFORE: {review[:60]} | AFTER: {fixed[:60]}")
             if _non_dining:
                 fixed = re.sub(r'\bdinner kiya\b', f'{_place} visit kiya', fixed, flags=re.IGNORECASE)
                 fixed = re.sub(r'\blunch kiya\b', f'{_place} visit kiya', fixed, flags=re.IGNORECASE)
