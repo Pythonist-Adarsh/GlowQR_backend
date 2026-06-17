@@ -121,9 +121,12 @@ CATEGORY_LANGUAGE_MAP = {
 def get_category_context(category: str) -> dict:
     if not category:
         return CATEGORY_LANGUAGE_MAP["other"]
+    category_normalized = category.lower().strip().replace(" ", "").replace("-", "").replace("_", "")
+    for key in CATEGORY_LANGUAGE_MAP:
+        key_normalized = key.lower().replace(" ", "").replace("-", "").replace("_", "")
+        if key_normalized == category_normalized:
+            return CATEGORY_LANGUAGE_MAP[key]
     category_lower = category.lower().strip()
-    if category_lower in CATEGORY_LANGUAGE_MAP:
-        return CATEGORY_LANGUAGE_MAP[category_lower]
     for key in CATEGORY_LANGUAGE_MAP:
         if key in category_lower or category_lower in key:
             return CATEGORY_LANGUAGE_MAP[key]
