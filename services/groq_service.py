@@ -110,6 +110,12 @@ CATEGORY_LANGUAGE_MAP = {
         "experience_words": ["faculty", "course", "classes", "learning", "environment"],
         "avoid_words": ["food", "meal", "dinner", "dish", "treatment", "haircut"],
     },
+    "tax / ca firm": {
+        "place_word": "firm",
+        "visit_word": "consulted",
+        "experience_words": ["service", "advice", "expertise", "professionalism", "consultation"],
+        "avoid_words": ["food", "meal", "dinner", "dish", "haircut", "treatment"],
+    },
     "other": {
         "place_word": "place",
         "visit_word": "visited",
