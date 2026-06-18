@@ -14,7 +14,7 @@ def fetch_place_details(place_id: str):
     # Extract data_id if place_id is actually a URL
     if place_id.startswith("http"):
         # Match "1s0x...:0x..."
-        match = re.search(r'1s(0x[0-9a-f]+:0x[0-9a-f]+)', place_id)
+        match = re.search(r'1s(0x[0-9a-fA-F]+:0x[0-9a-fA-F]+)', place_id)
         if match:
             place_id = "!4m2!3m1!1s" + match.group(1)
         else:
