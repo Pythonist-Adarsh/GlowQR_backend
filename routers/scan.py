@@ -48,6 +48,7 @@ def get_qr_page_data(slug: str, db: Session = Depends(get_db)):
         "instagram_url": getattr(business, 'instagram_url', ''),
         "google_review_url": business.google_review_url or "",
         "menu_items": menu_items,
+        "highlighted_dishes": business.highlighted_dishes or "",
         "business_category": business.category or "",
         "negative_filter_enabled": business.negative_filter_enabled,
         "review_language": business.review_language,
