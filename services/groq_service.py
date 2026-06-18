@@ -514,7 +514,7 @@ async def extract_menu_from_image(file_bytes: bytes, mime_type: str = "image/jpe
 Rules: ONLY JSON, no code blocks, clean item names, keep currency symbols, never empty menuCategories."""
 
         response = client.chat.completions.create(
-            model="llama-3.2-90b-vision-preview",
+            model="meta-llama/llama-4-scout-17b-16e-instruct",
             messages=[
                 {
                     "role": "user",
@@ -544,7 +544,13 @@ Rules: ONLY JSON, no code blocks, clean item names, keep currency symbols, never
             text = match.group(0)
             
         text = text.replace('```json', '').replace('```', '').strip()
-        return json.loads(text)
+        parsed_json = json.loads(text)
+        
+        # Ensure menuCategories exists
+        if "menuCategories" not in parsed_json or not isinstance(parsed_json["menuCategories"], list):
+            parsed_json["menuCategories"] = []
+            
+        return parsed_json
         
     except Exception as e:
         import traceback
