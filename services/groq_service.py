@@ -296,7 +296,7 @@ async def generate_reviews(
     else:
         rating_instruction = "Reviews are positive. Vary tone naturally."
 
-    if plan == 'premium':
+    if plan == 'premium' or plan == 'trial':
         user_prompt = f"""
 Business Details:
 - Name: {business_name}
