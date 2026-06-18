@@ -204,10 +204,12 @@ async def step_5(
     if current_user.plan == 'basic':
         animation_style = 'glow_float'
     else:
-        if theme == 'classic': animation_style = 'particle_burst'
-        elif theme == 'premium': animation_style = 'minimal_fade'
+        if theme == 'classic': 
+            animation_style = 'particle_burst'
+        else:
+            animation_style = 'minimal_fade'
         
-    ai_variant_count = 3
+    ai_variant_count = 5 if current_user.plan in ['trial', 'premium'] else 3
     if variants:
         try:
             ai_variant_count = int(variants.split()[0])
