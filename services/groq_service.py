@@ -514,7 +514,7 @@ async def extract_menu_from_image(file_bytes: bytes, mime_type: str = "image/jpe
 Rules: ONLY JSON, no code blocks, clean item names, keep currency symbols, never empty menuCategories."""
 
         response = client.chat.completions.create(
-            model="meta-llama/llama-4-scout-17b-16e-instruct",
+            model="llama-3.2-90b-vision-preview",
             messages=[
                 {
                     "role": "user",
