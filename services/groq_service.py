@@ -259,6 +259,19 @@ async def generate_reviews(
         "hope they fix these issues",
     ]
 
+    cat_ctx = get_category_context(category)
+
+    if cat_ctx["place_word"] in ["firm", "clinic", "institute"]:
+        _storyteller_contexts = [
+            "to get my ITR filed",
+            "for GST registration for my new business",
+            "on a colleague's recommendation",
+            "for tax consultation before financial year end",
+            "to sort out my company registration",
+            "after seeing their reviews online",
+            "for my father's income tax matters",
+        ]
+
     _r1_opener = random.choice(_openers)
     _r2_context = random.choice(_storyteller_contexts)
     _r3_issue = random.choice(_minor_issues)
@@ -271,7 +284,7 @@ async def generate_reviews(
     elif overall_rating == 3:
         _r3_issue = random.choice(_minor_issues + _negative_experiences)
         # _r1_opener and _r2_context already randomly picked above — keep them
-    cat_ctx = get_category_context(category)
+
     place_word = cat_ctx["place_word"]
     avoid_str = ", ".join(cat_ctx["avoid_words"]) if cat_ctx["avoid_words"] else "none"
     items_list = selected_items[:3] if selected_items else []
