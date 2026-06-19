@@ -172,6 +172,15 @@ def approve_upgrade_patch(id: int, db: Session = Depends(get_db), verified: bool
     user = db.query(models.User).filter(models.User.id == req.user_id).first()
     if user:
         user.plan = req.plan_requested
+        user.plan_expires_at = req.expires_at
+        user.renewal_reminder_sent = False
+        
+        # Activate QR codes
+        businesses = db.query(models.Business).filter(models.Business.owner_id == user.id).all()
+        for business in businesses:
+            qr_codes = db.query(models.QRCode).filter(models.QRCode.business_id == business.id).all()
+            for qr in qr_codes:
+                qr.is_active = True
         
     sub = models.Subscription(
         user_id=req.user_id,
@@ -185,7 +194,16 @@ def approve_upgrade_patch(id: int, db: Session = Depends(get_db), verified: bool
     db.commit()
     
     if user:
-        send_activation_email(user, req.business_name, req.plan_requested, req.expires_at)
+        if req.request_type == 'renewal':
+            from services.email_service import send_renewal_confirmed_alert
+            send_renewal_confirmed_alert(
+                owner_email=user.email,
+                owner_name=user.full_name or "User",
+                plan=user.plan,
+                new_expiry_date=req.expires_at.strftime("%B %d, %Y")
+            )
+        else:
+            send_activation_email(user, req.business_name, req.plan_requested, req.expires_at)
     
     return {"message": "Approved successfully", "expires_at": req.expires_at}
 

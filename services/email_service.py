@@ -382,3 +382,80 @@ def send_admin_bomb_alert(admin_email: str, business_name: str, alert, owner):
     except Exception as e:
         print(f"Error sending admin bomb alert: {e}")
 
+def send_renewal_reminder_alert(owner_email: str, owner_name: str, plan: str, expiry_date: str, upi_id: str):
+    html = f"""
+    <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
+        <h2 style="color: #F59E0B;">Reminder: Your GlowQR Plan Expires Soon</h2>
+        <p>Hi {owner_name}! 👋</p>
+        <p>Your GlowQR <b>{plan}</b> plan expires in 7 days (on {expiry_date}).</p>
+        <p>Renew now to keep your QR active:</p>
+        <p>👉 <b>Login → Dashboard → Renew Plan</b></p>
+        <p>Or pay via UPI to: <b>{upi_id}</b></p>
+        <br/>
+        <a href="{APP_URL}/dashboard" style="display:inline-block; background:#111; color:#fff; text-decoration:none; padding:10px 20px; border-radius:8px;">Go to Dashboard</a>
+        <br/><br/>
+        <p>Need help? Reply to this email. 🙏</p>
+        <p>— GlowQR Team</p>
+    </div>
+    """
+    try:
+        resend.Emails.send({
+            "from": "GlowQR Admin <onboarding@resend.dev>",
+            "to": [owner_email],
+            "subject": f"⚠️ Action Required: Your GlowQR plan expires in 7 days",
+            "html": html
+        })
+    except Exception as e:
+        print(f"Error sending renewal reminder alert: {e}")
+
+def send_expired_alert(owner_email: str, owner_name: str, upi_id: str):
+    html = f"""
+    <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
+        <h2 style="color: #EF4444;">Your GlowQR Plan Has Expired</h2>
+        <p>Hi {owner_name}, your GlowQR plan has expired. 😔</p>
+        <p>Your QR code is now inactive — customers see a paused message.</p>
+        <p>Renew now to reactivate instantly:</p>
+        <p>👉 <b>Login → Dashboard → Renew Plan</b></p>
+        <p>UPI ID: <b>{upi_id}</b></p>
+        <br/>
+        <a href="{APP_URL}/dashboard" style="display:inline-block; background:#111; color:#fff; text-decoration:none; padding:10px 20px; border-radius:8px;">Renew Now</a>
+        <br/><br/>
+        <p>— GlowQR Team</p>
+    </div>
+    """
+    try:
+        resend.Emails.send({
+            "from": "GlowQR Admin <onboarding@resend.dev>",
+            "to": [owner_email],
+            "subject": f"🔴 Your GlowQR Plan has Expired",
+            "html": html
+        })
+    except Exception as e:
+        print(f"Error sending expired alert: {e}")
+
+def send_renewal_confirmed_alert(owner_email: str, owner_name: str, plan: str, new_expiry_date: str):
+    html = f"""
+    <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
+        <h2 style="color: #10B981;">Renewal Confirmed! 🎉</h2>
+        <p>Hi {owner_name}! 🎉</p>
+        <p>Your GlowQR <b>{plan}</b> plan has been renewed successfully!</p>
+        <p>QR is active again — valid till <b>{new_expiry_date}</b>.</p>
+        <br/>
+        <p>Thank you for continuing with GlowQR! 🙏</p>
+        <br/>
+        <a href="{APP_URL}/dashboard" style="display:inline-block; background:#111; color:#fff; text-decoration:none; padding:10px 20px; border-radius:8px;">Go to Dashboard</a>
+        <br/><br/>
+        <p>— GlowQR Team</p>
+    </div>
+    """
+    try:
+        resend.Emails.send({
+            "from": "GlowQR Admin <onboarding@resend.dev>",
+            "to": [owner_email],
+            "subject": f"✅ Renewal Successful: Your GlowQR plan is active",
+            "html": html
+        })
+    except Exception as e:
+        print(f"Error sending renewal confirmed alert: {e}")
+
+

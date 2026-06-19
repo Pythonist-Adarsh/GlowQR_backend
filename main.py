@@ -24,6 +24,7 @@ from routers.analytics import router as analytics_router
 from routers.upgrade import router as upgrade_router
 from routers.admin import router as admin_router
 from routers.bomb_alerts import router as bomb_alerts_router
+from routers.renewal import router as renewal_router
 
 load_dotenv(override=True)
 models.Base.metadata.create_all(bind=engine)
@@ -35,8 +36,10 @@ scheduler = BackgroundScheduler()
 @app.on_event("startup")
 def start_scheduler():
     scheduler.add_job(sync_all_businesses, 'cron', hour=3, minute=0, timezone='Asia/Kolkata')
+    from cron import run_daily_renewal_jobs
+    scheduler.add_job(run_daily_renewal_jobs, 'cron', hour=9, minute=0, timezone='Asia/Kolkata')
     scheduler.start()
-    print("Daily sync scheduler started (3:00 AM IST)")
+    print("Daily sync scheduler and renewal scheduler started")
 
 @app.on_event("shutdown")
 def stop_scheduler():
@@ -91,6 +94,7 @@ app.include_router(analytics_router)
 app.include_router(upgrade_router)
 app.include_router(admin_router)
 app.include_router(bomb_alerts_router)
+app.include_router(renewal_router)
 
 # Google OAuth Setup
 oauth = OAuth()

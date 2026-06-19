@@ -24,6 +24,10 @@ class User(Base):
     # Auth Extensions
     password_reset_at = Column(DateTime(timezone=True), nullable=True)
     
+    # Subscription / Billing Extensions
+    plan_expires_at = Column(DateTime(timezone=True), nullable=True)
+    renewal_reminder_sent = Column(Boolean, default=False)
+    
     # Notifications & Preferences
     notif_new_review = Column(Boolean, default=True)
     notif_negative_alert = Column(Boolean, default=True)
@@ -210,6 +214,7 @@ class UpgradeRequest(Base):
     utr_number = Column(String, nullable=True)
     payment_method = Column(String)
     status = Column(String, default="pending") # pending/verified/rejected
+    request_type = Column(String, nullable=True) # e.g. renewal
     admin_note = Column(String, nullable=True)
     activated_at = Column(DateTime(timezone=True), nullable=True)
     expires_at = Column(DateTime(timezone=True), nullable=True)

@@ -15,8 +15,11 @@ router = APIRouter(tags=["Scan"])
 @router.get("/api/qr/{slug}")
 def get_qr_page_data(slug: str, db: Session = Depends(get_db)):
     qr_code = db.query(models.QRCode).filter(models.QRCode.slug == slug).first()
-    if not qr_code or not qr_code.is_active:
-        raise HTTPException(status_code=404, detail="QR Code not found or inactive")
+    if not qr_code:
+        raise HTTPException(status_code=404, detail="QR Code not found")
+        
+    if not qr_code.is_active:
+        return {"status": "paused", "message": "Service temporarily paused"}
         
     business = db.query(models.Business).filter(models.Business.id == qr_code.business_id).first()
     if not business:
