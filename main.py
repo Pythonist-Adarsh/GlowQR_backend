@@ -124,7 +124,7 @@ def health_check(db: Session = Depends(get_db)):
 
 @app.get("/auth/google")
 async def google_login(request: Request):
-    redirect_uri = "https://glowqr.com/auth/google/callback"
+    redirect_uri = "https://glowqr.onrender.com/auth/google/callback"
     return await oauth.google.authorize_redirect(request, redirect_uri)
 
 @app.get("/auth/google/callback")
@@ -163,8 +163,8 @@ async def google_callback(request: Request, db: Session = Depends(get_db)):
 
         access_token = security.create_access_token(data={"sub": user.email})
         
-        frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
-        return RedirectResponse(url=f"{frontend_url}/auth-success?token={access_token}&onboarding_completed={str(has_business).lower()}")
+        frontend_url = os.getenv("FRONTEND_URL", "https://glowqr.com")
+        return RedirectResponse(url=f"{frontend_url}/auth/google/callback?token={access_token}&onboarding_completed={str(has_business).lower()}")
         
     except Exception as e:
         import traceback
