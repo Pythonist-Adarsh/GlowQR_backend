@@ -124,7 +124,7 @@ def health_check(db: Session = Depends(get_db)):
 
 @app.get("/auth/google")
 async def google_login(request: Request):
-    redirect_uri = os.getenv("GOOGLE_REDIRECT_URI", "https://glowqr.com/auth/google/callback")
+    redirect_uri = "https://glowqr.com/auth/google/callback"
     return await oauth.google.authorize_redirect(request, redirect_uri)
 
 @app.get("/auth/google/callback")
