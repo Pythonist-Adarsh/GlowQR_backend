@@ -2,14 +2,14 @@ import resend
 import os
 
 resend.api_key = os.environ.get("RESEND_API_KEY")
-APP_URL = os.environ.get("APP_URL", "https://glow-qr-frontend.vercel.app")
+APP_URL = os.environ.get("APP_URL", "https://glowqr.com")
 # Hardcode to ensure Render doesn't override with an old invalid email
 ADMIN_EMAIL = "professional.adarsh.00@gmail.com"
 
 def send_upgrade_alert_to_admin(request: dict, approve_url: str, reject_url: str):
     amount = "Ã¢â€šÂ¹199" if request['plan_requested'] == 'basic' else "Ã¢â€šÂ¹499"
     resend.Emails.send({
-        "from": "GlowQR <onboarding@resend.dev>",
+        "from": "GlowQR <hello@glowqr.com>",
         "to": [ADMIN_EMAIL],
         "subject": f"Ã°Å¸â€â€ New Upgrade Ã¢â‚¬â€ {request['business_name']} wants {request['plan_requested'].upper()} {amount}",
         "html": f"""
@@ -31,7 +31,7 @@ def send_upgrade_alert_to_admin(request: dict, approve_url: str, reject_url: str
 
 def send_qr_is_live(business_name: str, owner_email: str, scan_url: str):
     resend.Emails.send({
-        "from": "GlowQR <onboarding@resend.dev>",
+        "from": "GlowQR <hello@glowqr.com>",
         "to": [owner_email],
         "subject": f"Ã°Å¸Å½â€° Your GlowQR for {business_name} is live!",
         "html": f"""
@@ -45,7 +45,7 @@ def send_qr_is_live(business_name: str, owner_email: str, scan_url: str):
 
 def send_negative_feedback_alert(business_name: str, owner_email: str, rating: int, feedback_text: str):
     resend.Emails.send({
-        "from": "GlowQR Admin <onboarding@resend.dev>",
+        "from": "GlowQR <hello@glowqr.com>",
         "to": [owner_email],
         "subject": f"Ã¢Å¡Â Ã¯Â¸ï¿½ New negative feedback Ã¢â‚¬â€ {business_name}",
         "html": f"""
@@ -61,7 +61,7 @@ def send_negative_feedback_alert(business_name: str, owner_email: str, rating: i
 def send_password_reset_email(email: str, reset_link: str):
     try:
         resend.Emails.send({
-            "from": "GlowQR <onboarding@resend.dev>",
+            "from": "GlowQR <hello@glowqr.com>",
             "to": [email],
             "subject": "Reset your GlowQR Password",
             "html": f"""
@@ -81,7 +81,7 @@ def send_password_reset_email(email: str, reset_link: str):
 def send_activation_email(user, business_name: str, plan: str, expires_at):
     try:
         resend.Emails.send({
-            "from": "GlowQR <onboarding@resend.dev>",
+            "from": "GlowQR <hello@glowqr.com>",
             "to": [user.email],
             "subject": f"Ã°Å¸Å½â€° Your GlowQR {plan.capitalize()} Plan is Now Active!",
             "html": f"""
@@ -100,7 +100,7 @@ def send_activation_email(user, business_name: str, plan: str, expires_at):
 def send_rejection_email(user, business_name: str, reason: str):
     try:
         resend.Emails.send({
-            "from": "GlowQR <onboarding@resend.dev>",
+            "from": "GlowQR <hello@glowqr.com>",
             "to": [user.email],
             "subject": "GlowQR Payment Verification Ã¢â‚¬â€ Action Required",
             "html": f"""
@@ -274,7 +274,7 @@ async def send_low_rating_alert_email(
     
     try:
         resend.Emails.send({
-            "from": "GlowQR Admin <onboarding@resend.dev>",
+            "from": "GlowQR <hello@glowqr.com>",
             "to": [owner_email],
             "subject": f"🚨 {rating}★ Review just posted — {business_name}",
             "html": html_body
@@ -285,8 +285,8 @@ async def send_low_rating_alert_email(
 import os
 import resend
 
-APP_URL = os.environ.get('APP_URL', 'https://glow-qr-frontend.vercel.app')
-SENDER = 'GlowQR Admin <onboarding@resend.dev>'
+APP_URL = os.environ.get('APP_URL', 'https://glowqr.com')
+SENDER = 'GlowQR <hello@glowqr.com>'
 
 def send_weekly_digest(owner_email: str, data: dict):
     try:
@@ -297,7 +297,7 @@ def send_weekly_digest(owner_email: str, data: dict):
             html_template = html_template.replace(f'{{{{{key}}}}}', str(value))
             
         resend.Emails.send({
-            'from': SENDER,
+            'from': 'GlowQR <hello@glowqr.com>',
             'to': [owner_email],
             'subject': f"{data.get('business_name', 'Your Business')} — Weekly Performance Report & Improvement Tips",
             'html': html_template
@@ -347,7 +347,7 @@ def send_owner_bomb_alert(owner_email: str, business_name: str, alert, business_
     
     try:
         resend.Emails.send({
-            "from": "GlowQR Security <onboarding@resend.dev>",
+            "from": "GlowQR <hello@glowqr.com>",
             "to": [owner_email],
             "subject": subject,
             "html": html
@@ -374,7 +374,7 @@ def send_admin_bomb_alert(admin_email: str, business_name: str, alert, owner):
     
     try:
         resend.Emails.send({
-            "from": "GlowQR System <onboarding@resend.dev>",
+            "from": "GlowQR <hello@glowqr.com>",
             "to": [admin_email],
             "subject": subject,
             "html": html
@@ -400,7 +400,7 @@ def send_renewal_reminder_alert(owner_email: str, owner_name: str, plan: str, ex
     """
     try:
         resend.Emails.send({
-            "from": "GlowQR Admin <onboarding@resend.dev>",
+            "from": "GlowQR <hello@glowqr.com>",
             "to": [owner_email],
             "subject": f"⚠️ Action Required: Your GlowQR plan expires in 7 days",
             "html": html
@@ -425,7 +425,7 @@ def send_expired_alert(owner_email: str, owner_name: str, upi_id: str):
     """
     try:
         resend.Emails.send({
-            "from": "GlowQR Admin <onboarding@resend.dev>",
+            "from": "GlowQR <hello@glowqr.com>",
             "to": [owner_email],
             "subject": f"🔴 Your GlowQR Plan has Expired",
             "html": html
@@ -450,7 +450,7 @@ def send_renewal_confirmed_alert(owner_email: str, owner_name: str, plan: str, n
     """
     try:
         resend.Emails.send({
-            "from": "GlowQR Admin <onboarding@resend.dev>",
+            "from": "GlowQR <hello@glowqr.com>",
             "to": [owner_email],
             "subject": f"✅ Renewal Successful: Your GlowQR plan is active",
             "html": html

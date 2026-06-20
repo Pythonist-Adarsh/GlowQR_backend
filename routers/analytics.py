@@ -807,8 +807,8 @@ def send_weekly_summary(user: models.User = Depends(require_premium), db: Sessio
         "top_dish_count": 34,
         "top_dish_rating": 4.8,
         "top_dish_pct": 78,
-        "dashboard_url": f"https://glow-qr-frontend.vercel.app/dashboard",
-        "unsubscribe_url": f"https://glow-qr-frontend.vercel.app/unsubscribe"
+        "dashboard_url": f"https://glowqr.com/dashboard",
+        "unsubscribe_url": f"https://glowqr.com/unsubscribe"
     }
     
     from services.email_service import send_weekly_digest

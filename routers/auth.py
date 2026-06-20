@@ -184,7 +184,7 @@ def update_password(pw_data: dict = Body(...), db: Session = Depends(get_db), cu
     return {"status": "ok"}
 
 RESET_TOKEN_SECRET = os.getenv("RESET_TOKEN_SECRET", os.getenv("SECRET_KEY", "supersecret"))
-FRONTEND_URL = os.getenv("FRONTEND_URL", "https://glow-qr-frontend.vercel.app")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "https://glowqr.com")
 
 @router.post("/forgot-password")
 def forgot_password(req: schemas.ForgotPasswordRequest, db: Session = Depends(get_db)):

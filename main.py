@@ -72,8 +72,8 @@ app.add_middleware(
         "http://127.0.0.1:3000",
         "http://localhost:3001",
         "http://localhost:3050",
-        "https://glowqr-frontend.vercel.app",
-        "https://glow-qr-frontend.vercel.app",
+        "https://glowqr.com",
+        "https://www.glowqr.com",
         "https://glowqr-frontend-git-main-adarshs-projects-c0267937.vercel.app"
     ],
     allow_credentials=True,
@@ -123,7 +123,7 @@ def health_check(db: Session = Depends(get_db)):
 
 @app.get("/auth/google")
 async def google_login(request: Request):
-    redirect_uri = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:8000/auth/google/callback")
+    redirect_uri = os.getenv("GOOGLE_REDIRECT_URI", "https://glowqr.com/auth/google/callback")
     return await oauth.google.authorize_redirect(request, redirect_uri)
 
 @app.get("/auth/google/callback")
