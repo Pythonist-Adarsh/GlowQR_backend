@@ -89,8 +89,8 @@ CATEGORY_LANGUAGE_MAP = {
     "bridal & festive jewellery": {
         "place_word": "store",
         "visit_word": "visited",
-        "experience_words": ["collection", "jewellery", "designs", "staff helped", "occasion"],
-        "avoid_words": ["food", "meal", "dinner", "dish", "treatment"],
+        "experience_words": ["jewellery collection", "bridal set", "designs", "craftsmanship", "staff helped", "occasion", "fitting", "customization"],
+        "avoid_words": ["food", "meal", "dinner", "dish", "order", "haircut", "workout", "tax", "filing"],
     },
     "hotel": {
         "place_word": "hotel",
@@ -270,6 +270,17 @@ async def generate_reviews(
             "to sort out my company registration",
             "after seeing their reviews online",
             "for my father's income tax matters",
+        ]
+
+    if cat_ctx["place_word"] == "store" and "jewellery" in category.lower():
+        _storyteller_contexts = [
+            "for my sister's wedding shopping",
+            "to buy bridal jewellery for my own wedding",
+            "for an engagement ceremony",
+            "on a family member's recommendation",
+            "for festive season shopping",
+            "to get a customized jewellery set made",
+            "after seeing their designs online",
         ]
 
     _r1_opener = random.choice(_openers)
