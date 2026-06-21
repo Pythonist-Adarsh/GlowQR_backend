@@ -107,8 +107,8 @@ CATEGORY_LANGUAGE_MAP = {
     "education": {
         "place_word": "institute",
         "visit_word": "enrolled at",
-        "experience_words": ["faculty", "course", "classes", "learning", "environment"],
-        "avoid_words": ["food", "meal", "dinner", "dish", "treatment", "haircut"],
+        "experience_words": ["faculty", "test series", "mock tests", "study material", "classes", "mentorship", "doubt solving", "results", "batch", "course"],
+        "avoid_words": ["food", "meal", "dinner", "dish", "order", "haircut", "workout", "tax", "filing", "jewellery"],
     },
     "tax / ca firm": {
         "place_word": "firm",
@@ -261,7 +261,7 @@ async def generate_reviews(
 
     cat_ctx = get_category_context(category)
 
-    if cat_ctx["place_word"] in ["firm", "clinic", "institute"]:
+    if cat_ctx["place_word"] == "firm":
         _storyteller_contexts = [
             "to get my ITR filed",
             "for GST registration for my new business",
@@ -270,6 +270,24 @@ async def generate_reviews(
             "to sort out my company registration",
             "after seeing their reviews online",
             "for my father's income tax matters",
+        ]
+    elif cat_ctx["place_word"] == "institute":
+        _storyteller_contexts = [
+            "after joining their batch this semester",
+            "on my friend's recommendation",
+            "to prepare for competitive exams",
+            "after comparing multiple coaching centers",
+            "for my younger sibling's admission",
+            "to improve my weak subjects",
+            "after seeing their results online",
+        ]
+    elif cat_ctx["place_word"] == "clinic":
+        _storyteller_contexts = [
+            "on a family member's recommendation",
+            "for a routine checkup",
+            "after searching online",
+            "for a second opinion",
+            "on my colleague's suggestion",
         ]
 
     if cat_ctx["place_word"] == "store" and "jewellery" in category.lower():
