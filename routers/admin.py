@@ -667,7 +667,12 @@ def get_businesses_list(db: Session = Depends(get_db), verified: bool = Depends(
             "name": bus.name,
             "category": bus.category,
             "city": bus.city,
-            "plan": usr.plan or "trial"
+            "plan": usr.plan or "trial",
+            "primaryColor": bus.primary_color,
+            "welcomeMessage": bus.welcome_message,
+            "tagline": bus.tagline,
+            "logoUrl": bus.logo_url,
+            "website": bus.website_url
         })
     return {"businesses": out}
 
