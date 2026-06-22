@@ -656,3 +656,43 @@ def delete_user(user_id: int, db: Session = Depends(get_db), verified: bool = De
 
     db.commit()
     return {"success": True, "message": "User and all associated data deleted"}
+
+@router.get("/businesses-list")
+def get_businesses_list(db: Session = Depends(get_db), verified: bool = Depends(verify_admin)):
+    results = db.query(models.Business, models.User).join(models.User, models.Business.owner_id == models.User.id).all()
+    out = []
+    for bus, usr in results:
+        out.append({
+            "id": bus.id,
+            "name": bus.name,
+            "category": bus.category,
+            "city": bus.city,
+            "plan": usr.plan or "trial"
+        })
+    return {"businesses": out}
+
+from pydantic import BaseModel
+class SimulateReviewsRequest(BaseModel):
+    business_name: str
+    category: str
+    city: str
+    services: str
+    overall_rating: int
+    plan: str
+
+@router.post("/simulate-reviews")
+async def simulate_reviews(data: SimulateReviewsRequest, verified: bool = Depends(verify_admin)):
+    from services.groq_service import generate_reviews
+    services_list = [s.strip() for s in data.services.split(",") if s.strip()]
+    
+    result = await generate_reviews(
+        business_name=data.business_name,
+        category=data.category,
+        overall_rating=data.overall_rating,
+        selected_items=services_list,
+        plan=data.plan,
+        city=data.city,
+        return_debug=True
+    )
+    
+    return result

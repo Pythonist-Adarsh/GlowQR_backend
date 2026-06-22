@@ -202,8 +202,9 @@ async def generate_reviews(
     plan: str = 'trial',
     city: str = None,
     session_id: str = None,
+    return_debug: bool = False,
     **kwargs
-) -> list[str]:
+):
     
     business_location = city or "their city"
 
@@ -487,11 +488,33 @@ Output ONLY a valid JSON array of exactly 3 strings. No explanation, no markdown
             lang = 'hinglish' if (plan == 'premium' and len(cleaned) >= 3) else 'english'
             cleaned.append(get_fallback_review(business_name, lang, len(cleaned)))
             
-        return cleaned[:variant_count]
+        final_reviews = cleaned[:variant_count]
+        
+        if return_debug:
+            return {
+                "reviews": final_reviews,
+                "place_word": _place,
+                "avoid_words": avoid_str.split(", ") if avoid_str else [],
+                "storyteller_context": _r2_context,
+                "r1_opener": _r1_opener,
+                "r3_issue": _r3_issue
+            }
+            
+        return final_reviews
         
     except Exception as e:
         print(f"Groq error: {e}")
-        return [get_fallback_review(business_name, 'hinglish' if (plan == 'premium' and i >= 3) else 'english', i) for i in range(variant_count)]
+        fallbacks = [get_fallback_review(business_name, 'hinglish' if (plan == 'premium' and i >= 3) else 'english', i) for i in range(variant_count)]
+        if return_debug:
+            return {
+                "reviews": fallbacks,
+                "place_word": cat_ctx.get("place_word", ""),
+                "avoid_words": [],
+                "storyteller_context": "",
+                "r1_opener": "",
+                "r3_issue": ""
+            }
+        return fallbacks
 
 async def generate_business_insights(data: dict) -> list[dict]:
     prompt = f"""You are a business advisor for Indian local businesses. Be specific and data-driven.
