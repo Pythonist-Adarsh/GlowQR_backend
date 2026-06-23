@@ -11,7 +11,33 @@ def fetch_place_details(place_id: str):
         print("SERP_API key not found in environment.")
         return None
 
-    # Extract data_id if place_id is actually a URL
+    # If place_id is a raw Google Place ID (ChIJ...)
+    if place_id.startswith("ChIJ"):
+        params = {
+            "engine": "google_maps_reviews",
+            "place_id": place_id,
+            "api_key": api_key,
+        }
+        try:
+            response = requests.get("https://serpapi.com/search", params=params, timeout=10)
+            response.raise_for_status()
+            data = response.json()
+            
+            place_info = data.get("place_info", {})
+            rating = place_info.get("rating")
+            reviews = place_info.get("reviews")
+            
+            if rating is not None and reviews is not None:
+                return {
+                    "google_rating": float(rating),
+                    "review_count": int(reviews)
+                }
+            return None
+        except Exception as e:
+            print(f"Error fetching place details (reviews engine) for {place_id}: {e}")
+            return None
+
+    # Original logic for data_id / URLs
     if place_id.startswith("http"):
         # Match "1s0x...:0x..."
         match = re.search(r'1s(0x[0-9a-fA-F]+:0x[0-9a-fA-F]+)', place_id)
