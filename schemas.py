@@ -272,3 +272,7 @@ class AlertOwnerRequest(BaseModel):
 class UpdateAlertRequest(BaseModel):
     is_read: Optional[bool] = None
     is_resolved: Optional[bool] = None
+
+class ReviewUrlUpdate(BaseModel):
+    place_id: str
+

@@ -513,6 +513,7 @@ def get_business_admin_detail(business_id: int, db: Session = Depends(get_db), v
         "google_rating": bus.google_rating,
         "google_review_count": bus.review_count,
         "baseline_review_count": bus.baseline_review_count,
+        "place_id": bus.place_id,
         "google_review_url": bus.google_review_url,
         "tagline": bus.tagline,
         "created_at": bus.created_at,
@@ -701,3 +702,15 @@ async def simulate_reviews(data: SimulateReviewsRequest, verified: bool = Depend
     )
     
     return result
+
+@router.patch("/business/{business_id}/review-url")
+def update_review_url(business_id: int, data: schemas.ReviewUrlUpdate, db: Session = Depends(get_db), verified: bool = Depends(verify_admin)):
+    business = db.query(models.Business).filter(models.Business.id == business_id).first()
+    if not business:
+        raise HTTPException(status_code=404, detail="Business not found")
+        
+    business.place_id = data.place_id
+    business.google_review_url = f"https://search.google.com/local/writereview?placeid={data.place_id}"
+    db.commit()
+    db.refresh(business)
+    return {"google_place_id": business.place_id, "google_review_url": business.google_review_url}
