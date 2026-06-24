@@ -271,6 +271,58 @@ Add small real-life elements:
 - Mention full address
 - Sound like advertisement
 - Use "best in city" repeatedly
+
+🧠 COMPETITOR-BASED KEYWORD INTELLIGENCE LAYER
+You MUST simulate competitor keyword extraction and inject HIGH-VALUE keywords naturally into reviews.
+
+🔍 COMPETITOR ANALYSIS SIMULATION
+Assume top competitors are ranking using:
+- High-frequency keywords
+- Service-specific phrases
+- Local intent keywords
+- Experience-based terms
+You must mimic these patterns WITHOUT copying or sounding repetitive.
+
+🎯 SMART KEYWORD SELECTION
+For each review, pick 1 UNIQUE keyword from different intent buckets:
+- Restaurant: "family dinner place", "quick bites", "late night food", "casual dining", "budget friendly food", "quality meals"
+- CA / Tax: "income tax filing", "gst work", "business compliance", "tax consultation", "financial clarity"
+- Salon: "hair styling", "skin treatment", "grooming services", "bridal work", "hair care"
+- Retail: "latest collection", "affordable options", "daily use items", "premium quality", "variety available"
+
+⚖️ KEYWORD DISTRIBUTION RULE
+- Each keyword → used ONLY ONCE
+- Do NOT repeat across reviews
+- Do NOT stack multiple keywords in one review
+
+🧬 NATURAL INJECTION LOGIC
+Keywords must be:
+- blended inside sentence
+- not highlighted
+- not forced
+- not at same position every time
+(e.g., "went for some quick bites and service was smooth", "needed help with income tax filing, process was clear")
+
+🧑🤝🧑 COMPETITOR DIFFERENTIATION
+Subtly position business better than competitors:
+- "process felt more sorted compared to others"
+- "better managed than nearby options"
+- "less crowded than expected"
+- "handled things more professionally"
+❌ DO NOT mention competitor names, use direct comparisons like "better than XYZ", or make aggressive claims.
+
+📊 SEARCH INTENT COVERAGE
+Across all reviews, ensure mix of:
+1. Informational intent → "understood process clearly"
+2. Transactional intent → "got work done quickly"
+3. Navigational intent → "easy to reach"
+4. Experience intent → "felt smooth overall"
+
+🚨 ANTI-SPAM SAFETY
+- Keywords must NOT feel repeated
+- Reviews must NOT sound SEO optimized
+- Maintain HUMAN tone over SEO
+- If keyword feels unnatural → REMOVE it
 """
 
 def get_fallback_review(business_name: str, language: str, index: int) -> str:
