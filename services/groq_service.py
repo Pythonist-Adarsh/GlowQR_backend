@@ -217,6 +217,60 @@ CATEGORY-SPECIFIC LANGUAGE — HIGHEST PRIORITY RULE:
 - Always use the exact place_word provided — if place_word is "food court", write "food court" everywhere, never "restaurant"
 - This rule overrides everything else — no exceptions whatsoever
 - Never mention the place_word (e.g. "food court", "salon") twice within the same sentence — use natural phrasing like "this place" or "here" for the second reference if needed
+
+📍 LOCAL SEO OPTIMIZATION LAYER (RANKING BOOST)
+You MUST subtly optimize reviews for LOCAL SEO without triggering spam signals.
+
+🗺️ LOCATION SIGNAL STRATEGY
+- City name → MAX 1 review only
+- Area/locality → Use in 1-2 reviews (more natural than city)
+- Nearby landmark → OPTIONAL in 1 review (e.g. "near sector 18", "close to metro station")
+❌ NEVER repeat same location phrase
+
+🔍 KEYWORD INJECTION (VERY SUBTLE)
+Each review should NATURALLY include 1 soft keyword:
+- Restaurant: "good food", "tasty dishes", "quick service", "nice ambience"
+- CA / Tax: "smooth filing", "clear guidance", "professional help", "easy process"
+- Salon: "clean setup", "good results", "friendly staff", "well maintained"
+- Retail: "good quality", "reasonable price", "nice collection", "worth checking"
+❌ DO NOT force keywords
+❌ DO NOT repeat same keyword more than once
+
+⭐ RATING BEHAVIOR SIMULATION
+- 4 reviews → strong positive
+- 1 review → slightly neutral-positive ("Everything was smooth, just a bit waiting time", "Service was nice overall")
+
+🧑🤝🧑 USER INTENT VARIATION
+Each review should reflect DIFFERENT intent:
+1. First-time visitor
+2. Repeat customer
+3. Recommendation-based visit
+4. Urgent/quick need visit
+5. Casual/random visit
+
+🕒 TIME CONTEXT (OPTIONAL NATURALITY)
+Use in 1-2 reviews only:
+- "went in evening"
+- "weekend visit"
+- "during rush hours"
+- "last week"
+❌ DO NOT overuse
+
+💬 NATURAL DETAIL INJECTION
+Add small real-life elements:
+- waiting time mention
+- staff name (rarely, 1 max)
+- specific experience moment
+- small imperfection
+(e.g., "thoda wait tha but worth it", "billing was quick", "staff handled things well")
+
+🚨 LOCAL SEO SAFETY RULES
+❌ DO NOT:
+- Stuff keywords
+- Repeat location phrases
+- Mention full address
+- Sound like advertisement
+- Use "best in city" repeatedly
 """
 
 def get_fallback_review(business_name: str, language: str, index: int) -> str:
@@ -410,8 +464,6 @@ CATEGORY RULES — STRICTLY FOLLOW (NO EXCEPTIONS):
 - The word "dinner" is COMPLETELY BANNED in all reviews unless {place_word} is "restaurant" or "fine dining"
 - NEVER use these words in ANY of the reviews: {avoid_str}
 - Every review must sound like a real customer of a {place_word} — not a restaurant customer
-- SEO phrase in Review 4 must be exactly: "best {place_word} near me"
-- SEO phrase in Review 5 must be exactly: "best {place_word} in {business_location}"
 
 Generate exactly 5 reviews following the STRUCTURE RANDOMIZATION rules.
 Use these UNIQUE SEEDS for this scan — mandatory, do not ignore:
@@ -421,8 +473,6 @@ Use these UNIQUE SEEDS for this scan — mandatory, do not ignore:
 - Seed 3 (Use in one review): Mention this minor imperfection "{_r3_issue}"
 
 Ensure you strictly follow the LANGUAGE VARIATION rules (Hinglish/English mix).
-Ensure Review 4 contains the exact phrase: "best {place_word} near me"
-Ensure Review 5 contains the exact phrase: "best {place_word} in {business_location}"
 
 CHECKLIST before outputting:
 - No banned words used (e.g., "highly recommend" max once total)
@@ -457,8 +507,6 @@ CATEGORY RULES — STRICTLY FOLLOW (NO EXCEPTIONS):
 - The word "dinner" is COMPLETELY BANNED in all reviews unless {place_word} is "restaurant" or "fine dining"
 - NEVER use these words in ANY of the reviews: {avoid_str}
 - Every review must sound like a real customer of a {place_word} — not a restaurant customer
-- SEO phrase in Review 4 must be exactly: "best {place_word} near me"
-- SEO phrase in Review 5 must be exactly: "best {place_word} in {business_location}"
 
 Generate exactly 3 reviews following the STRUCTURE RANDOMIZATION rules.
 Use these UNIQUE SEEDS for this scan — mandatory, do not ignore:
