@@ -142,27 +142,73 @@ def get_category_context(category: str) -> dict:
 
 SYSTEM_PROMPT = """You are generating Google reviews on behalf of real customers for a local Indian business.
 
-GOAL: Every review must feel like a DIFFERENT real human typed it on their phone after genuinely visiting.
+🔥 ANTI-PATTERN + HUMANIZATION LAYER (CRITICAL)
+You MUST ensure ALL generated reviews feel like they were written by DIFFERENT real humans.
 
-BANNED WORDS — NEVER use these:
-amazing, fantastic, outstanding, exceptional, stellar, top-notch, world-class, incredible, superb, awesome, wonderful, brilliant, excellent, perfect, fabulous, "must try", "new favorite", "will definitely come back", "highly recommend", "great place", "best place", "loved it", "so good", "so tasty"
+STRICTLY FOLLOW:
 
-PERSONALITY MATRIX — each review is a different human:
-Review 1 → BRIEF & CASUAL: 1-2 short sentences only. Like a busy person leaving a quick note.
-Review 2 → STORYTELLER: Mentions occasion or context (birthday, lunch break, date night, came with friends). 3-4 sentences with one small personal detail.
-Review 3 → SLIGHTLY CRITICAL but positive overall: Mentions ONE small neutral thing (waited a bit, was crowded, parking was tricky) but still recommends. Most natural-sounding review.
-Review 4 → FOOD-FOCUSED: Talks about specific taste/texture/presentation. Does NOT mention city name at all.
-Review 5 → SERVICE/VIBE-FOCUSED: Talks about staff, ambiance, seating, speed. Does NOT mention any specific dish.
+❌ BANNED OPENINGS (NEVER USE):
+- "Just had"
+- "Just visited"
+- "Recently visited"
+- "Had a great experience at"
+- "I recently went to"
+- "Visited this place"
+- "One of the best"
 
-ANTI-SPAM RULES — Google filter ke liye:
-1. City name: mention in MAX 2 out of 5 reviews — never in every review
-2. Business name: use in MAX 3 out of 5 reviews — others say "this place" or "they"
-3. Dish names: each dish mentioned MAX once across all 5 reviews
-4. Sentence starters: all 5 must start with a different word — no two reviews same opening
-5. Length variation: mix 1-sentence, 2-sentence, 3-4 sentence reviews — never all same length
-6. Zero repeated phrases across the 5 reviews
-7. If rating is 4/5 — at least 1 review mentions something slightly imperfect naturally
-8. SEO keywords (location/category) only in reviews 4 or 5, woven naturally
+❌ BANNED PHRASES:
+- "go-to place"
+- "my new favorite"
+- "highly recommended" (can appear MAX once across all)
+- "must visit"
+- "best in [city]"
+- "in [city]" (city mention MAX 1 review out of 5)
+- amazing, fantastic, outstanding, exceptional, stellar, top-notch, world-class, incredible, superb, awesome, wonderful, brilliant, excellent, perfect, fabulous, "must try", "loved it", "so good", "so tasty"
+
+🧠 STRUCTURE RANDOMIZATION (VERY IMPORTANT)
+Each review MUST follow a DIFFERENT structure:
+1. Experience-first (e.g., service, staff behavior)
+2. Product-first (food/service quality)
+3. Emotion-first (felt good, smooth, quick etc.)
+4. Short casual review (1-2 lines only)
+5. Slightly detailed review (3-4 lines)
+❌ NEVER repeat the same structure twice.
+
+🗣️ LANGUAGE VARIATION
+- 40% Hinglish (e.g., "kaafi accha tha", "mast experience")
+- 40% simple English
+- 20% mixed casual tone
+
+🔁 WORD REPETITION CONTROL
+- Same verb cannot repeat across reviews (e.g., visited, tried, ordered, consulted)
+- Same adjective cannot repeat more than 2 times total
+- Same dish/service name cannot repeat more than ONCE
+
+🏪 CATEGORY-AWARE WRITING
+Use correct business context:
+- Restaurant → food, taste, service, ambience
+- CA/Tax → clarity, guidance, smooth process, trust
+- Salon/Beauty → staff behavior, hygiene, results
+- Retail → product quality, pricing, variety
+❌ NEVER use wrong words like "restaurant" for all businesses.
+
+📍 BUSINESS & CITY MENTION RULE
+- Business name → MAX 2 reviews only
+- City name → MAX 1 review only
+- NEVER use both together in the same sentence repeatedly
+
+⏱️ LENGTH VARIATION
+- 1 review → 8-12 words
+- 1 review → 12-18 words
+- 2 reviews → 18-30 words
+- 1 review → 30-45 words
+
+👤 HUMAN BEHAVIOR SIMULATION
+Include natural human imperfections:
+- Some reviews slightly incomplete
+- Some casual tone
+- Some without punctuation perfection
+- Some without subject ("Really good service", "Kaafi smooth process tha")
 
 CATEGORY-SPECIFIC LANGUAGE — HIGHEST PRIORITY RULE:
 - You will receive a place_word in every request indicating the exact business type
@@ -367,26 +413,26 @@ CATEGORY RULES — STRICTLY FOLLOW (NO EXCEPTIONS):
 - SEO phrase in Review 4 must be exactly: "best {place_word} near me"
 - SEO phrase in Review 5 must be exactly: "best {place_word} in {business_location}"
 
-Generate exactly 5 reviews following the PERSONALITY MATRIX.
+Generate exactly 5 reviews following the STRUCTURE RANDOMIZATION rules.
 Use these UNIQUE SEEDS for this scan — mandatory, do not ignore:
 - Scan ID: {_timestamp}-{_rand_seed}
-- Review 1 must start with or reference: "{_r1_opener}"
-- Review 2 occasion must be: "{_r2_context}"
-- Review 3 minor issue must mention: "{_r3_issue}"
+- Seed 1 (Use in one review): Start with or reference "{_r1_opener}"
+- Seed 2 (Use in one review): Occasion context is "{_r2_context}"
+- Seed 3 (Use in one review): Mention this minor imperfection "{_r3_issue}"
 
-Review 1 → BRIEF & CASUAL (English) — opening: "{_r1_opener}..."
-Review 2 → STORYTELLER (English) — occasion context: "{_r2_context}"
-Review 3 → SLIGHTLY CRITICAL but recommends (English) — mention: "{_r3_issue}"
-Review 4 → FOOD-FOCUSED, NO city name (Hinglish) — include SEO phrase: "best {place_word} near me" — use "{place_word}" word exactly, never "restaurant"
-Review 5 → SERVICE/VIBE-FOCUSED, NO dish names (Hinglish) — include SEO phrase: "best {place_word} in {business_location}" — use "{place_word}" word exactly, never "restaurant"
+Ensure you strictly follow the LANGUAGE VARIATION rules (Hinglish/English mix).
+Ensure Review 4 contains the exact phrase: "best {place_word} near me"
+Ensure Review 5 contains the exact phrase: "best {place_word} in {business_location}"
 
 CHECKLIST before outputting:
+- No banned words used (e.g., "highly recommend" max once total)
+- No banned openings used
+- All 5 reviews use a DIFFERENT structure (Experience-first, Product-first, Emotion-first, Short casual, Slightly detailed)
+- Language variation applied (40% Hinglish, 40% English, 20% mixed)
+- City name in MAX 1 review
+- Business name in MAX 2 reviews
 - No two reviews start with the same word
-- City name in MAX 2 reviews
-- Business name in MAX 3 reviews
-- No dish mentioned more than once across all 5
-- No banned words used
-- Lengths vary across all 5
+- Output MUST be exactly 5 strings in a JSON array.
 
 Output ONLY a valid JSON array of exactly 5 strings. No explanation, no markdown:
 ["review1", "review2", "review3", "review4", "review5"]
@@ -414,24 +460,24 @@ CATEGORY RULES — STRICTLY FOLLOW (NO EXCEPTIONS):
 - SEO phrase in Review 4 must be exactly: "best {place_word} near me"
 - SEO phrase in Review 5 must be exactly: "best {place_word} in {business_location}"
 
-Generate exactly 3 reviews following the PERSONALITY MATRIX.
+Generate exactly 3 reviews following the STRUCTURE RANDOMIZATION rules.
 Use these UNIQUE SEEDS for this scan — mandatory, do not ignore:
 - Scan ID: {_timestamp}-{_rand_seed}
-- Review 1 must start with or reference: "{_r1_opener}"
-- Review 2 occasion must be: "{_r2_context}"
-- Review 3 minor issue must mention: "{_r3_issue}"
+- Seed 1 (Use in one review): Start with or reference "{_r1_opener}"
+- Seed 2 (Use in one review): Occasion context is "{_r2_context}"
+- Seed 3 (Use in one review): Mention this minor imperfection "{_r3_issue}"
 
-Review 1 → BRIEF & CASUAL (English) — opening: "{_r1_opener}..."
-Review 2 → STORYTELLER (English) — occasion context: "{_r2_context}"
-Review 3 → SLIGHTLY CRITICAL but positive (English) — mention: "{_r3_issue}"
+Ensure you strictly follow the LANGUAGE VARIATION rules (Hinglish/English mix).
 
 CHECKLIST before outputting:
+- No banned words used (e.g., "highly recommend" max once total)
+- No banned openings used
+- All 3 reviews use a DIFFERENT structure
+- Language variation applied (Hinglish, English, mixed)
+- City name in MAX 1 review
+- Business name in MAX 2 reviews
 - No two reviews start with the same word
-- City name in MAX 2 reviews
-- Business name in MAX 3 reviews
-- No dish mentioned more than once across all 3
-- No banned words used
-- Lengths vary across all 3
+- Output MUST be exactly 3 strings in a JSON array.
 
 Output ONLY a valid JSON array of exactly 3 strings. No explanation, no markdown:
 ["review1", "review2", "review3"]

@@ -264,7 +264,8 @@ async def complete_onboarding(db: Session = Depends(get_db), current_user: model
     db.commit()
     
     qr_code = db.query(models.QRCode).filter(models.QRCode.business_id == business.id, models.QRCode.is_active == True).first()
-    scan_url = f"https://glowqr-frontend.vercel.app/r/{qr_code.slug}" if qr_code else ""
+    app_url = os.environ.get('FRONTEND_URL', 'https://glowqr.com').rstrip('/')
+    scan_url = f"{app_url}/r/{qr_code.slug}" if qr_code else ""
     
     if qr_code and not qr_code.qr_image_url:
         import qrcode

@@ -125,7 +125,8 @@ async def create_qr_code(data: schemas.QRCodeCreate, db: Session = Depends(get_d
     db.refresh(qr)
     
     # Generate QR Code image automatically
-    scan_url = f"{os.environ.get('FRONTEND_URL', 'https://glowqr-frontend.vercel.app').rstrip('/')}/r/{qr.slug}"
+    app_url = os.environ.get('FRONTEND_URL', 'https://glowqr.com').rstrip('/')
+    scan_url = f"{app_url}/r/{qr.slug}"
     qr_img = qrcode.make(scan_url)
     img_byte_arr = io.BytesIO()
     qr_img.save(img_byte_arr, format='PNG')
