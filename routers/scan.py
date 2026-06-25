@@ -60,6 +60,7 @@ def get_qr_page_data(slug: str, db: Session = Depends(get_db)):
         "animation_style": business.animation_style,
         "seasonal_theme": business.seasonal_theme,
         "particle_intensity": business.particle_intensity,
+        "menu_data": business.menu_data,
         "qr_slug": slug
     }
 
