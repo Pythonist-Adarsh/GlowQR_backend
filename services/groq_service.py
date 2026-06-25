@@ -761,7 +761,19 @@ Rules: ONLY JSON, no code blocks, clean item names, keep currency symbols, never
             text = match.group(0)
             
         text = text.replace('```json', '').replace('```', '').strip()
-        parsed_json = json.loads(text)
+        try:
+            parsed_json = json.loads(text)
+        except json.JSONDecodeError as e:
+            print(f"JSON parsing failed, attempting repair... {e}")
+            repair_prompt = f"The following JSON is malformed. Fix it and return ONLY the valid JSON, nothing else:\n\n{text}"
+            repair_response = client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[{"role": "user", "content": repair_prompt}],
+                temperature=0.1,
+                response_format={"type": "json_object"}
+            )
+            repair_text = repair_response.choices[0].message.content.strip()
+            parsed_json = json.loads(repair_text)
         
         # Ensure menuCategories exists
         if "menuCategories" not in parsed_json or not isinstance(parsed_json["menuCategories"], list):
