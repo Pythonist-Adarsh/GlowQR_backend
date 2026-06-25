@@ -1,0 +1,450 @@
+[
+  {
+    "name": "Pawpup Cafe",
+    "category": "cafe",
+    "menu_data": [
+      {
+        "category": "Sides",
+        "items": [
+          {
+            "id": 1,
+            "name": "Crispy fries (Plain salted/Peri-peri)",
+            "emoji": "",
+            "price": "\u20b9149/159"
+          },
+          {
+            "id": 2,
+            "name": "Cheese loaded fries (Veg/Chicken)",
+            "emoji": "",
+            "price": "\u20b9179/229"
+          },
+          {
+            "id": 3,
+            "name": "Cheesy loaded nachos with salsa",
+            "emoji": "",
+            "price": "\u20b9179"
+          },
+          {
+            "id": 4,
+            "name": "Cheesy garlic bread",
+            "emoji": "",
+            "price": "\u20b9239"
+          },
+          {
+            "id": 5,
+            "name": "Cheesling chakhna",
+            "emoji": "",
+            "price": "\u20b9239"
+          }
+        ]
+      },
+      {
+        "category": "Salads",
+        "items": [
+          {
+            "id": 6,
+            "name": "Cardini Caeser salad (Veg/non-veg)",
+            "emoji": "",
+            "price": "\u20b9209/249"
+          },
+          {
+            "id": 7,
+            "name": "Greek salads",
+            "emoji": "",
+            "price": "\u20b9229"
+          },
+          {
+            "id": 8,
+            "name": "Watermelon & feta salad",
+            "emoji": "",
+            "price": "\u20b9229"
+          },
+          {
+            "id": 9,
+            "name": "Grilled chicken salad",
+            "emoji": "",
+            "price": "\u20b9279"
+          },
+          {
+            "id": 10,
+            "name": "Protein salad",
+            "emoji": "",
+            "price": "\u20b9249"
+          }
+        ]
+      },
+      {
+        "category": "Non-veg Appetizers",
+        "items": [
+          {
+            "id": 11,
+            "name": "Chicken popcorn",
+            "emoji": "",
+            "price": "\u20b9229"
+          },
+          {
+            "id": 12,
+            "name": "Chicken cheese balls",
+            "emoji": "",
+            "price": "\u20b9249"
+          },
+          {
+            "id": 13,
+            "name": "Chimichuri chicken",
+            "emoji": "",
+            "price": "\u20b9349"
+          },
+          {
+            "id": 14,
+            "name": "Chichek wings (Fiery/grilled)",
+            "emoji": "",
+            "price": "\u20b9299"
+          },
+          {
+            "id": 15,
+            "name": "Drums of heaven",
+            "emoji": "",
+            "price": "\u20b9329"
+          },
+          {
+            "id": 16,
+            "name": "Chicken lollypop",
+            "emoji": "",
+            "price": "\u20b9299"
+          },
+          {
+            "id": 17,
+            "name": "Chilli chicken",
+            "emoji": "",
+            "price": "\u20b9299"
+          },
+          {
+            "id": 18,
+            "name": "Fish & chips",
+            "emoji": "",
+            "price": "\u20b9279"
+          },
+          {
+            "id": 19,
+            "name": "Fish fingers",
+            "emoji": "",
+            "price": "\u20b9259"
+          },
+          {
+            "id": 20,
+            "name": "Chicken nuggets",
+            "emoji": "",
+            "price": "\u20b9229"
+          }
+        ]
+      },
+      {
+        "category": "Veg Appetizers",
+        "items": [
+          {
+            "id": 21,
+            "name": "Bruschetta",
+            "emoji": "",
+            "price": "\u20b9249"
+          },
+          {
+            "id": 22,
+            "name": "Jalapeno pepper cheese cigar roll",
+            "emoji": "",
+            "price": "\u20b9249"
+          },
+          {
+            "id": 23,
+            "name": "Corn cheese garlic nuggets",
+            "emoji": "",
+            "price": "\u20b9229"
+          },
+          {
+            "id": 24,
+            "name": "Potato croquettes",
+            "emoji": "",
+            "price": "\u20b9199"
+          },
+          {
+            "id": 25,
+            "name": "Crispy lotus stem",
+            "emoji": "",
+            "price": "\u20b9229"
+          },
+          {
+            "id": 26,
+            "name": "Crunchy baby corn",
+            "emoji": "",
+            "price": "\u20b9229"
+          },
+          {
+            "id": 27,
+            "name": "Corn pepper chilly",
+            "emoji": "",
+            "price": "\u20b9229"
+          },
+          {
+            "id": 28,
+            "name": "Onion rings",
+            "emoji": "",
+            "price": "\u20b9199"
+          },
+          {
+            "id": 29,
+            "name": "Chilly cottage cheese",
+            "emoji": "",
+            "price": "\u20b9279"
+          },
+          {
+            "id": 30,
+            "name": "Crispy machurian dry",
+            "emoji": "",
+            "price": "\u20b9249"
+          },
+          {
+            "id": 31,
+            "name": "Honey chilli potato",
+            "emoji": "",
+            "price": "\u20b9259"
+          }
+        ]
+      },
+      {
+        "category": "Soups",
+        "items": [
+          {
+            "id": 32,
+            "name": "Italian minestrone",
+            "emoji": "",
+            "price": "\u20b9199"
+          },
+          {
+            "id": 33,
+            "name": "Cream of mushroom",
+            "emoji": "",
+            "price": "\u20b9179"
+          },
+          {
+            "id": 34,
+            "name": "Roasted tomato & basil",
+            "emoji": "",
+            "price": "\u20b9179"
+          },
+          {
+            "id": 35,
+            "name": "Hot & sour (Veg/chicken)",
+            "emoji": "",
+            "price": "\u20b9179/199"
+          },
+          {
+            "id": 36,
+            "name": "Manchow (Veg/chicken)",
+            "emoji": "",
+            "price": "\u20b9179/199"
+          },
+          {
+            "id": 37,
+            "name": "Sweet corn",
+            "emoji": "",
+            "price": "\u20b9179"
+          },
+          {
+            "id": 38,
+            "name": "Lemon corriander (Veg/chicken)",
+            "emoji": "",
+            "price": "\u20b9179/199"
+          }
+        ]
+      },
+      {
+        "category": "Mocktails",
+        "items": [
+          {
+            "id": 39,
+            "name": "Virgin mojito",
+            "emoji": "",
+            "price": "\u20b9179"
+          },
+          {
+            "id": 40,
+            "name": "Sherley temple",
+            "emoji": "",
+            "price": "\u20b9179"
+          },
+          {
+            "id": 41,
+            "name": "Ultimate passion",
+            "emoji": "",
+            "price": "\u20b9199"
+          },
+          {
+            "id": 42,
+            "name": "Tropical forest",
+            "emoji": "",
+            "price": "\u20b9199"
+          },
+          {
+            "id": 43,
+            "name": "Mock Sangria",
+            "emoji": "",
+            "price": "\u20b9199"
+          },
+          {
+            "id": 44,
+            "name": "Watermelon delight",
+            "emoji": "",
+            "price": "\u20b9199"
+          },
+          {
+            "id": 45,
+            "name": "Blue lagoon",
+            "emoji": "",
+            "price": "\u20b9179"
+          },
+          {
+            "id": 46,
+            "name": "Pawpup soda sikanji",
+            "emoji": "",
+            "price": "\u20b9149"
+          },
+          {
+            "id": 47,
+            "name": "Fresh lime soda",
+            "emoji": "",
+            "price": "\u20b9149"
+          },
+          {
+            "id": 48,
+            "name": "Fresh lime soda",
+            "emoji": "",
+            "price": "\u20b9149"
+          },
+          {
+            "id": 49,
+            "name": "Virgin pina colada",
+            "emoji": "",
+            "price": "\u20b9179"
+          }
+        ]
+      },
+      {
+        "category": "Coffe & more",
+        "items": [
+          {
+            "id": 50,
+            "name": "Cappuccino",
+            "emoji": "",
+            "price": "\u20b9200"
+          },
+          {
+            "id": 51,
+            "name": "Americano",
+            "emoji": "",
+            "price": "\u20b9200"
+          },
+          {
+            "id": 52,
+            "name": "Espresso",
+            "emoji": "",
+            "price": "\u20b9150"
+          },
+          {
+            "id": 53,
+            "name": "Frappe",
+            "emoji": "",
+            "price": "\u20b9200"
+          },
+          {
+            "id": 54,
+            "name": "Latte",
+            "emoji": "",
+            "price": "\u20b9200"
+          },
+          {
+            "id": 55,
+            "name": "Mocha",
+            "emoji": "",
+            "price": "\u20b9200"
+          },
+          {
+            "id": 56,
+            "name": "Hazelnut cappuccino",
+            "emoji": "",
+            "price": "\u20b9250"
+          },
+          {
+            "id": 57,
+            "name": "Caramel latte",
+            "emoji": "",
+            "price": "\u20b9250"
+          },
+          {
+            "id": 58,
+            "name": "Hot chocolate",
+            "emoji": "",
+            "price": "\u20b9175"
+          },
+          {
+            "id": 59,
+            "name": "Iced mocha",
+            "emoji": "",
+            "price": "\u20b9175"
+          },
+          {
+            "id": 60,
+            "name": "Iced latte",
+            "emoji": "",
+            "price": "\u20b9175"
+          },
+          {
+            "id": 61,
+            "name": "Tea",
+            "emoji": "",
+            "price": "\u20b9150"
+          },
+          {
+            "id": 62,
+            "name": "Green tea",
+            "emoji": "",
+            "price": "\u20b9150"
+          }
+        ]
+      },
+      {
+        "category": "Shakes & smoothies",
+        "items": [
+          {
+            "id": 63,
+            "name": "Ferrero rocher smoothie",
+            "emoji": "",
+            "price": "\u20b9299"
+          },
+          {
+            "id": 64,
+            "name": "Blueberry smoothie",
+            "emoji": "",
+            "price": "\u20b9279"
+          },
+          {
+            "id": 65,
+            "name": "Strawberry smoothie",
+            "emoji": "",
+            "price": "\u20b9279"
+          },
+          {
+            "id": 66,
+            "name": "Kit kat shake",
+            "emoji": "",
+            "price": "\u20b9249"
+          },
+          {
+            "id": 67,
+            "name": "Oreo shake",
+            "emoji": "",
+            "price": "\u20b9249"
+          }
+        ]
+      }
+    ]
+  }
+]
