@@ -59,7 +59,12 @@ async def global_exception_handler(request: Request, exc: Exception):
     import traceback
     err_msg = "".join(traceback.format_exception(type(exc), exc, exc.__traceback__))
     print(err_msg)
-    return JSONResponse(status_code=500, content={"detail": str(exc), "traceback": err_msg})
+    response = JSONResponse(status_code=500, content={"detail": str(exc), "traceback": err_msg})
+    origin = request.headers.get("origin")
+    if origin:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+    return response
 
 # Rate Limiting
 setup_rate_limiting(app)
