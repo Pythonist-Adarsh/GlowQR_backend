@@ -164,6 +164,9 @@ STRICTLY FOLLOW:
 - "best in [city]"
 - "in [city]" (city mention MAX 1 review out of 5)
 - amazing, fantastic, outstanding, exceptional, stellar, top-notch, world-class, incredible, superb, awesome, wonderful, brilliant, excellent, perfect, fabulous, "must try", "loved it", "so good", "so tasty"
+- "had breakfast", "had lunch", "had dinner", "went for dinner", "went for lunch" (NEVER mention meal type)
+- "indoor seating", "outdoor seating", "sat inside", "sat outside" (NEVER mention seating type)
+
 
 🧠 STRUCTURE RANDOMIZATION (VERY IMPORTANT)
 Each review MUST follow a DIFFERENT structure:
@@ -471,6 +474,7 @@ async def generate_reviews(
     avoid_str = ", ".join(cat_ctx["avoid_words"]) if cat_ctx["avoid_words"] else "none"
     items_list = selected_items[:3] if selected_items else []
     services_str = ", ".join(items_list) if items_list else "general experience"
+    value_perception = kwargs.get("value_perception", "")
 
     if overall_rating == 5:
         rating_instruction = "All reviews are positive. Vary tone — not everyone is equally enthusiastic."
@@ -503,12 +507,15 @@ Business Details:
 - Name: {business_name}
 - Category: {category}
 - City: {business_location}
-- Menu items to reference (use sparingly, max once each): {services_str}
+- Dishes customer selected: {services_str}
+- DISH MENTION RULE: If dishes are provided above, you MUST naturally mention at least ONE dish name in the reviews. Do not skip this. Weave it naturally — never list all dishes, pick the most interesting one.
 - Session seed (do not output): {session_id}
 - Customer rating: {overall_rating}/5
+- Value perception: {value_perception if value_perception else "not specified"} — if specified, mention naturally in exactly 1 review only
+
 
 {rating_instruction}
-
+- Waiting time context: around 10 minutes — mention naturally in 1 review as a minor imperfection if rating is 4 or below
 CATEGORY RULES — STRICTLY FOLLOW (NO EXCEPTIONS):
 ⚠️ OVERRIDE: place_word = "{place_word}" — use this exact word in all reviews, the word "restaurant" is completely forbidden in this entire response unless place_word is restaurant
 - This business is a "{category}" — it is a {place_word}
@@ -546,11 +553,13 @@ Business Details:
 - Name: {business_name}
 - Category: {category}
 - City: {business_location}
-- Menu items to reference (use sparingly, max once each): {services_str}
+- Dishes customer selected: {services_str}
+- DISH MENTION RULE: If dishes are provided above, you MUST naturally mention at least ONE dish name in the reviews. Do not skip this. Weave it naturally — never list all dishes, pick the most interesting one.
 - Session seed (do not output): {session_id}
 - Customer rating: {overall_rating}/5
-
+- Value perception: {value_perception if value_perception else "not specified"} — if specified, mention naturally in exactly 1 review only
 {rating_instruction}
+
 
 CATEGORY RULES — STRICTLY FOLLOW (NO EXCEPTIONS):
 ⚠️ OVERRIDE: place_word = "{place_word}" — use this exact word in all reviews, the word "restaurant" is completely forbidden in this entire response unless place_word is restaurant
