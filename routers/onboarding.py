@@ -11,6 +11,7 @@ from services.storage_service import upload_logo_to_cloudinary
 from services.groq_service import extract_menu_from_image
 from services.email_service import send_qr_is_live
 from typing import Optional
+import os
 
 router = APIRouter(prefix="/api/onboarding", tags=["Onboarding"])
 
