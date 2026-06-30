@@ -136,7 +136,7 @@ async def step_2(
 
 @router.post("/step/3")
 def step_3(data: schemas.OnboardingStep3, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    valid_categories = ['restaurant', 'cafe', 'fastfood', 'bar', 'bakery', 'foodcourt', 'jewellery', 'tax / ca firm', 'education']
+    valid_categories = ['restaurant', 'cafe', 'fastfood', 'bar', 'bakery', 'foodcourt', 'jewellery', 'tax / ca firm', 'education', 'salon', 'gym']
     if data.category.lower() not in valid_categories:
         raise HTTPException(status_code=422, detail="Invalid category")
         

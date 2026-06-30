@@ -457,6 +457,24 @@ async def generate_reviews(
             "after seeing their designs online",
         ]
 
+    if cat_ctx["place_word"] == "salon":
+        _openers = [
+            "Finally got the haircut I always wanted...",
+            "The stylist really understood what I was looking for...",
+            "Such a clean and relaxing atmosphere...",
+            "Everyone noticed the change after my visit...",
+            "Great quality at a very reasonable price..."
+        ]
+
+    if cat_ctx["place_word"] == "gym":
+        _openers = [
+            "This gym genuinely changed my fitness routine...",
+            "The trainers here actually push you in the right way...",
+            "Clean equipment, proper AC, no overcrowding...",
+            "The energy and crowd here keeps you motivated...",
+            "Visible results within weeks of joining..."
+        ]
+
     _r1_opener = random.choice(_openers)
     _r2_context = random.choice(_storyteller_contexts)
     _r3_issue = random.choice(_minor_issues)
