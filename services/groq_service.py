@@ -244,25 +244,22 @@ You MUST subtly optimize reviews for LOCAL SEO without triggering spam signals.
 def get_fallback_review(business_name: str, language: str, index: int, selected_items: list = None) -> str:
     name = business_name or 'this place'
     
-    items_text = ""
-    if selected_items:
-        items_str = ", ".join(selected_items)
-        items_text = f" I especially enjoyed the {items_str}." if language == 'english' else f" Inka {items_str} zaroor try karna."
+    items_str = ", ".join(selected_items) if selected_items else ""
 
     fallbacks = {
         'english': [
-            f"Came here on a whim and left happy. {name} is worth the visit.{items_text}",
-            f"Service was quick and the food was fresh. Pretty good overall.{items_text}",
-            f"Decent spot. Was a bit busy when we went but the food made up for the wait.{items_text}",
-            f"Tried a few things off the menu — most were solid. Will probably stop by again.{items_text}",
-            f"Nice place to hang out. Staff were friendly and didn't rush us.{items_text}"
+            f"Came here on a whim and left happy. {name} is worth the visit." + (f" I especially enjoyed the {items_str}." if items_str else ""),
+            f"Service was quick and the food was fresh. Pretty good overall." + (f" Tried the {items_str} and it was great." if items_str else ""),
+            f"Decent spot. Was a bit busy when we went but the food made up for the wait." + (f" The {items_str} really stood out." if items_str else ""),
+            f"Tried a few things off the menu — most were solid. Will probably stop by again." + (f" Loved the {items_str}." if items_str else ""),
+            f"Nice place to hang out. Staff were friendly and didn't rush us." + (f" Highly recommend checking out the {items_str}." if items_str else "")
         ],
         'hinglish': [
-            f"{name} ne genuinely surprise kar diya. Khana fresh tha aur price bhi reasonable.{items_text}",
-            f"Service thodi slow thi but khana worth it tha. Overall experience acha raha.{items_text}",
-            f"Friends ke saath gaye the, sab ko pasand aaya. Dobara jaenge.{items_text}",
-            f"Taste mein koi compromise nahi. Ek baar try karna chahiye.{items_text}",
-            f"Ambiance acha hai, staff helpful tha. Solid evening rahi.{items_text}"
+            f"{name} ne genuinely surprise kar diya. Khana fresh tha aur price bhi reasonable." + (f" Inka {items_str} zaroor try karna." if items_str else ""),
+            f"Service thodi slow thi but khana worth it tha. Overall experience acha raha." + (f" {items_str} kaafi acha tha." if items_str else ""),
+            f"Friends ke saath gaye the, sab ko pasand aaya. Dobara jaenge." + (f" Specially {items_str} ne dil khush kar diya." if items_str else ""),
+            f"Taste mein koi compromise nahi. Ek baar try karna chahiye." + (f" {items_str} was amazing." if items_str else ""),
+            f"Ambiance acha hai, staff helpful tha. Solid evening rahi." + (f" Make sure to order the {items_str}." if items_str else "")
         ]
     }
     options = fallbacks.get(language.lower(), fallbacks['english'])
