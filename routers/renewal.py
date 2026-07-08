@@ -14,6 +14,7 @@ class RenewalRequestData(BaseModel):
     utr_number: str
     amount_paid: int
     payment_method: str
+    billing_cycle: str = "monthly"
 
 @router.post("/request")
 def request_renewal(data: RenewalRequestData, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
@@ -27,6 +28,7 @@ def request_renewal(data: RenewalRequestData, db: Session = Depends(get_db), cur
         phone=current_user.phone or "Unknown",
         email=current_user.email,
         plan_requested=data.plan,
+        billing_cycle=data.billing_cycle,
         amount_paid=data.amount_paid,
         utr_number=data.utr_number,
         payment_method=data.payment_method,

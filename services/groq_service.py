@@ -122,6 +122,12 @@ CATEGORY_LANGUAGE_MAP = {
         "experience_words": ["service", "staff", "experience", "quality", "value"],
         "avoid_words": [],
     },
+    "real estate": {
+        "place_word": "agency",
+        "visit_word": "consulted",
+        "experience_words": ["agent", "property", "deal", "broker", "site visit", "transparent", "registry", "residential", "commercial", "rental"],
+        "avoid_words": ["food", "meal", "dinner", "dish", "haircut", "treatment", "best in the market", "highly recommended service", "smooth and hassle-free experience"],
+    },
 }
 
 def get_category_context(category: str) -> dict:
@@ -193,6 +199,7 @@ Use correct business context:
 - CA/Tax → clarity, guidance, smooth process, trust
 - Salon/Beauty → staff behavior, hygiene, results
 - Retail → product quality, pricing, variety
+- Real Estate → professionalism, property genuineness, transparency, site visit, documentation speed
 ❌ NEVER use wrong words like "restaurant" for all businesses.
 
 📍 BUSINESS & CITY MENTION RULE
@@ -236,6 +243,7 @@ Each review should NATURALLY include 1 soft keyword:
 - CA / Tax: "smooth filing", "clear guidance", "professional help", "easy process"
 - Salon: "clean setup", "good results", "friendly staff", "well maintained"
 - Retail: "good quality", "reasonable price", "nice collection", "worth checking"
+- Real Estate: "transparent deal", "genuine property", "smooth documentation", "helpful agent"
 ❌ DO NOT force keywords
 ❌ DO NOT repeat same keyword more than once
 
@@ -292,6 +300,7 @@ For each review, pick 1 UNIQUE keyword from different intent buckets:
 - CA / Tax: "income tax filing", "gst work", "business compliance", "tax consultation", "financial clarity"
 - Salon: "hair styling", "skin treatment", "grooming services", "bridal work", "hair care"
 - Retail: "latest collection", "affordable options", "daily use items", "premium quality", "variety available"
+- Real Estate: "flat", "apartment", "plot", "commercial space", "rental property", "residential property", "property dealer", "real estate agent", "broker"
 
 ⚖️ KEYWORD DISTRIBUTION RULE
 - Each keyword → used ONLY ONCE
@@ -444,6 +453,16 @@ async def generate_reviews(
             "after searching online",
             "for a second opinion",
             "on my colleague's suggestion",
+        ]
+    elif cat_ctx["place_word"] == "agency" and "real estate" in category.lower().replace("_", " "):
+        _storyteller_contexts = [
+            "to buy a new flat",
+            "while looking for a rental property",
+            "for a commercial space lease",
+            "on a friend's recommendation for property investment",
+            "to sell our old property",
+            "for a site visit",
+            "after seeing their property listings online",
         ]
 
     if cat_ctx["place_word"] == "store" and "jewellery" in category.lower():
@@ -722,21 +741,36 @@ Return ONLY JSON array (3-5 insights). Structure:
         return []
 
 async def extract_menu_from_image(file_bytes: bytes, mime_type: str = "image/jpeg") -> dict:
+    import base64
+    images_b64 = []
     try:
-        if not mime_type or 'pdf' in mime_type.lower() or 'octet-stream' in mime_type.lower():
+        is_pdf = bool(mime_type and ('pdf' in mime_type.lower() or 'octet-stream' in mime_type.lower()))
+        if is_pdf:
             try:
                 import fitz
                 doc = fitz.open(stream=file_bytes, filetype="pdf")
-                if len(doc) > 0:
-                    page = doc[0]
+                if len(doc) == 0:
+                    raise Exception("Empty PDF")
+                for page in doc:
                     pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
-                    file_bytes = pix.tobytes("jpeg")
+                    images_b64.append(base64.b64encode(pix.tobytes("jpeg")).decode('utf-8'))
             except Exception as e:
-                print(f"PDF conversion skipped/failed: {e}")
+                print(f"PDF conversion failed: {e}")
+                if mime_type and 'pdf' in mime_type.lower():
+                    return {
+                        "error": "Could not read this PDF — try uploading it as images instead",
+                        "menuCategories": [],
+                        "highlightDishes": "",
+                        "signatureDish": ""
+                    }
+                else:
+                    images_b64 = [base64.b64encode(file_bytes).decode('utf-8')]
+        else:
+            images_b64 = [base64.b64encode(file_bytes).decode('utf-8')]
 
-        import base64
-        b64_image = base64.b64encode(file_bytes).decode('utf-8')
-        
+        if not images_b64:
+            return {"error": "No images found to process", "menuCategories": []}
+
         prompt = """Extract all menu items and return ONLY this JSON, no markdown:
 {
   "highlightDishes": "string",
@@ -757,56 +791,101 @@ async def extract_menu_from_image(file_bytes: bytes, mime_type: str = "image/jpe
 }
 Rules: ONLY JSON, no code blocks, clean item names, keep currency symbols, never empty menuCategories."""
 
-        response = client.chat.completions.create(
-            model="meta-llama/llama-4-scout-17b-16e-instruct",
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": f"data:image/jpeg;base64,{b64_image}"
+        final_categories = []
+        final_signature_dishes = []
+        final_highlight_dishes = []
+        
+        def add_unique_str(collection, item_to_add):
+            item_str = str(item_to_add).strip()
+            if not item_str: return
+            if not any(existing.lower() == item_str.lower() for existing in collection):
+                collection.append(item_str)
+
+        for b64_image in images_b64:
+            response = client.chat.completions.create(
+                model="meta-llama/llama-4-scout-17b-16e-instruct",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/jpeg;base64,{b64_image}"
+                                }
+                            },
+                            {
+                                "type": "text",
+                                "text": prompt
                             }
-                        },
-                        {
-                            "type": "text",
-                            "text": prompt
-                        }
-                    ]
-                }
-            ],
-            temperature=0.1,
-            max_tokens=2500
-        )
-        
-        text = response.choices[0].message.content.strip()
-        
-        import re
-        match = re.search(r'\{.*\}', text, re.DOTALL)
-        if match:
-            text = match.group(0)
-            
-        text = text.replace('```json', '').replace('```', '').strip()
-        try:
-            parsed_json = json.loads(text)
-        except json.JSONDecodeError as e:
-            print(f"JSON parsing failed, attempting repair... {e}")
-            repair_prompt = f"The following JSON is malformed. Fix it and return ONLY the valid JSON, nothing else:\n\n{text}"
-            repair_response = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=[{"role": "user", "content": repair_prompt}],
+                        ]
+                    }
+                ],
                 temperature=0.1,
-                response_format={"type": "json_object"}
+                max_tokens=2500
             )
-            repair_text = repair_response.choices[0].message.content.strip()
-            parsed_json = json.loads(repair_text)
-        
-        # Ensure menuCategories exists
-        if "menuCategories" not in parsed_json or not isinstance(parsed_json["menuCategories"], list):
-            parsed_json["menuCategories"] = []
             
-        return parsed_json
+            text = response.choices[0].message.content.strip()
+            
+            import re
+            match = re.search(r'\{.*\}', text, re.DOTALL)
+            if match:
+                text = match.group(0)
+                
+            text = text.replace('```json', '').replace('```', '').strip()
+            try:
+                parsed_json = json.loads(text)
+            except json.JSONDecodeError as e:
+                print(f"JSON parsing failed, attempting repair... {e}")
+                repair_prompt = f"The following JSON is malformed. Fix it and return ONLY the valid JSON, nothing else:\n\n{text}"
+                repair_response = client.chat.completions.create(
+                    model="llama-3.3-70b-versatile",
+                    messages=[{"role": "user", "content": repair_prompt}],
+                    temperature=0.1,
+                    response_format={"type": "json_object"}
+                )
+                repair_text = repair_response.choices[0].message.content.strip()
+                parsed_json = json.loads(repair_text)
+            
+            sig = parsed_json.get("signatureDish")
+            if sig and isinstance(sig, str) and sig.lower() not in ["sample signature", ""]:
+                for item in sig.split('\n'):
+                    add_unique_str(final_signature_dishes, item)
+            
+            highlights = parsed_json.get("highlightDishes")
+            if highlights and isinstance(highlights, str) and highlights.lower() not in ["sample dish", ""]:
+                for item in highlights.split('\n'):
+                    add_unique_str(final_highlight_dishes, item)
+            
+            cats = parsed_json.get("menuCategories", [])
+            if isinstance(cats, list):
+                for cat in cats:
+                    cat_name = cat.get("category", "")
+                    if not isinstance(cat_name, str): continue
+                    cat_name = cat_name.strip()
+                    if not cat_name: continue
+                    
+                    existing_cat = next((c for c in final_categories if c["category"].lower() == cat_name.lower()), None)
+                    if not existing_cat:
+                        existing_cat = {"category": cat_name, "items": []}
+                        final_categories.append(existing_cat)
+                        
+                    items = cat.get("items", [])
+                    if isinstance(items, list):
+                        for item in items:
+                            item_name = item.get("name", "")
+                            if not isinstance(item_name, str): continue
+                            item_name = item_name.strip()
+                            if not item_name: continue
+                            
+                            if not any(i.get("name", "").lower() == item_name.lower() for i in existing_cat["items"]):
+                                existing_cat["items"].append(item)
+
+        return {
+            "highlightDishes": "\n".join(final_highlight_dishes),
+            "signatureDish": "\n".join(final_signature_dishes),
+            "menuCategories": final_categories
+        }
         
     except Exception as e:
         import traceback

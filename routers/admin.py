@@ -167,11 +167,16 @@ def approve_upgrade_patch(id: int, db: Session = Depends(get_db), verified: bool
     req.status = 'verified'
     now = datetime.now(timezone.utc)
     req.activated_at = now
-    req.expires_at = now + timedelta(days=30)
+    
+    if req.billing_cycle == 'yearly':
+        req.expires_at = now + timedelta(days=365)
+    else:
+        req.expires_at = now + timedelta(days=30)
     
     user = db.query(models.User).filter(models.User.id == req.user_id).first()
     if user:
         user.plan = req.plan_requested
+        user.billing_cycle = req.billing_cycle
         user.plan_expires_at = req.expires_at
         user.renewal_reminder_sent = False
         
@@ -187,7 +192,7 @@ def approve_upgrade_patch(id: int, db: Session = Depends(get_db), verified: bool
         plan=req.plan_requested,
         status='active',
         current_period_start=now,
-        current_period_end=now + timedelta(days=30),
+        current_period_end=req.expires_at,
         amount_paise=req.amount_paid
     )
     db.add(sub)

@@ -382,15 +382,15 @@ def send_admin_bomb_alert(admin_email: str, business_name: str, alert, owner):
     except Exception as e:
         print(f"Error sending admin bomb alert: {e}")
 
-def send_renewal_reminder_alert(owner_email: str, owner_name: str, plan: str, expiry_date: str, upi_id: str):
+def send_renewal_reminder_alert(owner_email: str, owner_name: str, plan: str, expiry_date: str, upi_id: str, amount: str = "₹199"):
     html = f"""
     <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
         <h2 style="color: #F59E0B;">Reminder: Your GlowQR Plan Expires Soon</h2>
         <p>Hi {owner_name}! 👋</p>
-        <p>Your GlowQR <b>{plan}</b> plan expires in 7 days (on {expiry_date}).</p>
+        <p>Your GlowQR <b>{plan}</b> plan expires soon (on {expiry_date}).</p>
         <p>Renew now to keep your QR active:</p>
         <p>👉 <b>Login → Dashboard → Renew Plan</b></p>
-        <p>Or pay via UPI to: <b>{upi_id}</b></p>
+        <p>Or pay <b>{amount}</b> via UPI to: <b>{upi_id}</b></p>
         <br/>
         <a href="{APP_URL}/dashboard" style="display:inline-block; background:#111; color:#fff; text-decoration:none; padding:10px 20px; border-radius:8px;">Go to Dashboard</a>
         <br/><br/>
@@ -402,7 +402,7 @@ def send_renewal_reminder_alert(owner_email: str, owner_name: str, plan: str, ex
         resend.Emails.send({
             "from": "GlowQR <hello@glowqr.com>",
             "to": [owner_email],
-            "subject": f"⚠️ Action Required: Your GlowQR plan expires in 7 days",
+            "subject": f"⚠️ Action Required: Your GlowQR plan expires soon",
             "html": html
         })
     except Exception as e:

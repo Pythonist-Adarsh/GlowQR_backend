@@ -18,6 +18,7 @@ class User(UserBase):
     id: int
     is_active: bool
     plan: str
+    billing_cycle: str
     trial_ends_at: Optional[datetime] = None
     current_period_end: Optional[datetime] = None
     avatar_url: Optional[str] = None
@@ -225,6 +226,7 @@ class UpgradeRequestCreate(BaseModel):
     contact_name: str
     phone: str
     amount: int
+    billing_cycle: str = "monthly"
     utr_number: Optional[str] = None
     payment_method: str = "upi"
 

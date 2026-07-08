@@ -22,6 +22,7 @@ def request_upgrade(data: schemas.UpgradeRequestCreate, db: Session = Depends(ge
         phone=data.phone,
         email=current_user.email,
         plan_requested=data.plan,
+        billing_cycle=data.billing_cycle,
         amount_paid=amount_paid,
         utr_number=data.utr_number,
         payment_method=data.payment_method

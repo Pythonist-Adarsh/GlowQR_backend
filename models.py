@@ -18,6 +18,7 @@ class User(Base):
     
     # Subscription / Billing
     plan = Column(String, default="trial")
+    billing_cycle = Column(String, default="monthly")
     trial_ends_at = Column(DateTime(timezone=True), nullable=True)
     razorpay_customer_id = Column(String, nullable=True)
     
@@ -210,6 +211,7 @@ class UpgradeRequest(Base):
     phone = Column(String)
     email = Column(String)
     plan_requested = Column(String)
+    billing_cycle = Column(String, default="monthly")
     amount_paid = Column(Integer) # in paise usually, or whole rupees
     utr_number = Column(String, nullable=True)
     payment_method = Column(String)

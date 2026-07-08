@@ -46,29 +46,40 @@ def run_daily_renewal_jobs():
                 upi_id=upi_id
             )
 
-        # TASK 2: Send 7-day renewal reminders
-        # plan_expires_at BETWEEN now() AND now() + 7 days AND renewal_reminder_sent = false
+        # TASK 2: Send renewal reminders
+        # Monthly: 7-day buffer (plan_expires_at <= now() + 7 days)
+        # Yearly: 30-day buffer (plan_expires_at <= now() + 30 days)
+        thirty_days_from_now = now + timedelta(days=30)
         seven_days_from_now = now + timedelta(days=7)
-        expiring_users = db.query(models.User).filter(
+        
+        # Get all users who haven't been reminded and haven't expired
+        potential_users = db.query(models.User).filter(
             models.User.plan_expires_at >= now,
-            models.User.plan_expires_at <= seven_days_from_now,
+            models.User.plan_expires_at <= thirty_days_from_now,
             models.User.renewal_reminder_sent == False,
             models.User.plan.notin_(['trial', 'expired'])
         ).all()
 
-        for user in expiring_users:
-            # Send reminder alert
-            expiry_date_str = user.plan_expires_at.strftime("%B %d, %Y") if user.plan_expires_at else "soon"
-            send_renewal_reminder_alert(
-                owner_email=user.email,
-                owner_name=user.full_name or "User",
-                plan=user.plan,
-                expiry_date=expiry_date_str,
-                upi_id=upi_id
-            )
+        for user in potential_users:
+            is_yearly = (user.billing_cycle == 'yearly')
+            threshold = thirty_days_from_now if is_yearly else seven_days_from_now
             
-            user.renewal_reminder_sent = True
-            db.commit()
+            if user.plan_expires_at <= threshold:
+                # Send reminder alert
+                expiry_date_str = user.plan_expires_at.strftime("%B %d, %Y") if user.plan_expires_at else "soon"
+                send_renewal_reminder_alert(
+                    owner_email=user.email,
+                    owner_name=user.full_name or "User",
+                    plan=user.plan,
+                    expiry_date=expiry_date_str,
+                    upi_id=upi_id,
+                    amount="₹1,899" if (is_yearly and user.plan == 'basic') else
+                           "₹4,799" if (is_yearly and user.plan == 'premium') else
+                           "₹199" if user.plan == 'basic' else "₹499"
+                )
+                
+                user.renewal_reminder_sent = True
+                db.commit()
 
     except Exception as e:
         print(f"Error in daily renewal jobs: {e}")

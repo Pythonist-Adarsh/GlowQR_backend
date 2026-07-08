@@ -9,7 +9,7 @@ def fix_menu_data():
         updated_count = 0
         for b in businesses:
             if b.highlighted_dishes:
-                is_non_food = b.category and b.category.lower() in ['tax / ca firm', 'education', 'bridal & festive jewellery', 'salon', 'spa', 'gym', 'medical', 'retail', 'hotel', 'jewellery', 'other']
+                is_non_food = b.category and b.category.lower() in ['tax / ca firm', 'education', 'bridal & festive jewellery', 'salon', 'spa', 'gym', 'medical', 'retail', 'hotel', 'jewellery', 'other', 'real_estate']
                 if is_non_food:
                     services_list = [s.strip() for s in b.highlighted_dishes.split('\n') if s.strip()]
                     if services_list:
