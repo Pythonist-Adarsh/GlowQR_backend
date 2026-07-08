@@ -38,8 +38,21 @@ def send_qr_is_live(business_name: str, owner_email: str, scan_url: str):
         <h2>Your QR code is ready!</h2>
         <p>Business: {business_name}</p>
         <p>Scan URL: <a href="{scan_url}">{scan_url}</a></p>
-        <p>Dashboard: <a href="{APP_URL}/dashboard">View Dashboard</a></p>
         <p>Download your QR from the dashboard and place it at your counter.</p>
+        """
+    })
+
+def send_groq_rate_limit_alert(business_name: str, error_msg: str):
+    resend.Emails.send({
+        "from": "GlowQR <hello@glowqr.com>",
+        "to": [ADMIN_EMAIL],
+        "subject": "🚨 URGENT: GROQ Rate Limit Hit",
+        "html": f"""
+        <h2 style="color:red;">GROQ Rate Limit Exhausted</h2>
+        <p><b>Business Context:</b> {business_name}</p>
+        <p><b>Error Details:</b> {error_msg}</p>
+        <p>Customers are currently receiving hardcoded fallback reviews. Please consider upgrading the Groq tier immediately.</p>
+        <p><a href="https://console.groq.com/settings/billing">Go to Groq Billing Dashboard</a></p>
         """
     })
 

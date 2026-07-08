@@ -3,6 +3,9 @@ import json
 import os
 import base64
 from dotenv import load_dotenv
+import time
+
+LAST_RATE_LIMIT_ALERT_TIME = 0
 
 load_dotenv(override=True)
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
@@ -231,110 +234,11 @@ CATEGORY-SPECIFIC LANGUAGE — HIGHEST PRIORITY RULE:
 📍 LOCAL SEO OPTIMIZATION LAYER (RANKING BOOST)
 You MUST subtly optimize reviews for LOCAL SEO without triggering spam signals.
 
-🗺️ LOCATION SIGNAL STRATEGY
-- City name → MAX 1 review only
-- Area/locality → Use in 1-2 reviews (more natural than city)
-- Nearby landmark → OPTIONAL in 1 review (e.g. "near sector 18", "close to metro station")
-❌ NEVER repeat same location phrase
-
-🔍 KEYWORD INJECTION (VERY SUBTLE)
-Each review should NATURALLY include 1 soft keyword:
-- Restaurant: "good food", "tasty dishes", "quick service", "nice ambience"
-- CA / Tax: "smooth filing", "clear guidance", "professional help", "easy process"
-- Salon: "clean setup", "good results", "friendly staff", "well maintained"
-- Retail: "good quality", "reasonable price", "nice collection", "worth checking"
-- Real Estate: "transparent deal", "genuine property", "smooth documentation", "helpful agent"
-❌ DO NOT force keywords
-❌ DO NOT repeat same keyword more than once
-
-⭐ RATING BEHAVIOR SIMULATION
-- 4 reviews → strong positive
-- 1 review → slightly neutral-positive ("Everything was smooth, just a bit waiting time", "Service was nice overall")
-
-🧑🤝🧑 USER INTENT VARIATION
-Each review should reflect DIFFERENT intent:
-1. First-time visitor
-2. Repeat customer
-3. Recommendation-based visit
-4. Urgent/quick need visit
-5. Casual/random visit
-
-🕒 TIME CONTEXT (OPTIONAL NATURALITY)
-Use in 1-2 reviews only:
-- "went in evening"
-- "weekend visit"
-- "during rush hours"
-- "last week"
-❌ DO NOT overuse
-
-💬 NATURAL DETAIL INJECTION
-Add small real-life elements:
-- waiting time mention
-- staff name (rarely, 1 max)
-- specific experience moment
-- small imperfection
-(e.g., "thoda wait tha but worth it", "billing was quick", "staff handled things well")
-
-🚨 LOCAL SEO SAFETY RULES
-❌ DO NOT:
-- Stuff keywords
-- Repeat location phrases
-- Mention full address
-- Sound like advertisement
-- Use "best in city" repeatedly
-
-🧠 COMPETITOR-BASED KEYWORD INTELLIGENCE LAYER
-You MUST simulate competitor keyword extraction and inject HIGH-VALUE keywords naturally into reviews.
-
-🔍 COMPETITOR ANALYSIS SIMULATION
-Assume top competitors are ranking using:
-- High-frequency keywords
-- Service-specific phrases
-- Local intent keywords
-- Experience-based terms
-You must mimic these patterns WITHOUT copying or sounding repetitive.
-
-🎯 SMART KEYWORD SELECTION
-For each review, pick 1 UNIQUE keyword from different intent buckets:
-- Restaurant: "family dinner place", "quick bites", "late night food", "casual dining", "budget friendly food", "quality meals"
-- CA / Tax: "income tax filing", "gst work", "business compliance", "tax consultation", "financial clarity"
-- Salon: "hair styling", "skin treatment", "grooming services", "bridal work", "hair care"
-- Retail: "latest collection", "affordable options", "daily use items", "premium quality", "variety available"
-- Real Estate: "flat", "apartment", "plot", "commercial space", "rental property", "residential property", "property dealer", "real estate agent", "broker"
-
-⚖️ KEYWORD DISTRIBUTION RULE
-- Each keyword → used ONLY ONCE
-- Do NOT repeat across reviews
-- Do NOT stack multiple keywords in one review
-
-🧬 NATURAL INJECTION LOGIC
-Keywords must be:
-- blended inside sentence
-- not highlighted
-- not forced
-- not at same position every time
-(e.g., "went for some quick bites and service was smooth", "needed help with income tax filing, process was clear")
-
-🧑🤝🧑 COMPETITOR DIFFERENTIATION
-Subtly position business better than competitors:
-- "process felt more sorted compared to others"
-- "better managed than nearby options"
-- "less crowded than expected"
-- "handled things more professionally"
-❌ DO NOT mention competitor names, use direct comparisons like "better than XYZ", or make aggressive claims.
-
-📊 SEARCH INTENT COVERAGE
-Across all reviews, ensure mix of:
-1. Informational intent → "understood process clearly"
-2. Transactional intent → "got work done quickly"
-3. Navigational intent → "easy to reach"
-4. Experience intent → "felt smooth overall"
-
-🚨 ANTI-SPAM SAFETY
-- Keywords must NOT feel repeated
-- Reviews must NOT sound SEO optimized
-- Maintain HUMAN tone over SEO
-- If keyword feels unnatural → REMOVE it
+📍 LOCAL SEO & KEYWORDS (SUBTLE)
+- City name: MAX 1 review only.
+- Area/locality: Use in 1-2 reviews.
+- Inject 1 soft keyword naturally per review based on category (e.g. "tasty dishes", "smooth process", "clean setup", "genuine property"). 
+- DO NOT force keywords, repeat them, or sound like an advertisement. Maintain human tone over SEO.
 """
 
 def get_fallback_review(business_name: str, language: str, index: int) -> str:
@@ -545,7 +449,7 @@ Business Details:
 - Category: {category}
 - City: {business_location}
 - Customer's selected items: {services_str}
-- MANDATORY ITEMS RULE: If items are provided above, you MUST naturally mention ALL of them in EVERY SINGLE REVIEW VARIANT. Do not skip any item. Do not substitute them. Every generated review MUST contain all of these exact items.
+- MANDATORY ITEMS RULE: If items are provided above, you MUST naturally mention ALL of them in EVERY SINGLE REVIEW VARIANT. Do NOT just append them as a robotic comma-separated list at the end. Weave them into natural sentences (e.g., 'The [Item 1] was amazing and I really enjoyed the [Item 2]'). Do not skip any item. Do not substitute them.
 - Session seed (do not output): {session_id}
 - Customer rating: {overall_rating}/5
 - Value perception: {value_perception if value_perception else "not specified"} — if specified, mention naturally in exactly 1 review only
@@ -591,7 +495,7 @@ Business Details:
 - Category: {category}
 - City: {business_location}
 - Customer's selected items: {services_str}
-- MANDATORY ITEMS RULE: If items are provided above, you MUST naturally mention ALL of them in EVERY SINGLE REVIEW VARIANT. Do not skip any item. Do not substitute them. Every generated review MUST contain all of these exact items.
+- MANDATORY ITEMS RULE: If items are provided above, you MUST naturally mention ALL of them in EVERY SINGLE REVIEW VARIANT. Do NOT just append them as a robotic comma-separated list at the end. Weave them into natural sentences (e.g., 'The [Item 1] was amazing and I really enjoyed the [Item 2]'). Do not skip any item. Do not substitute them.
 - Session seed (do not output): {session_id}
 - Customer rating: {overall_rating}/5
 - Value perception: {value_perception if value_perception else "not specified"} — if specified, mention naturally in exactly 1 review only
@@ -646,7 +550,7 @@ Output ONLY a valid JSON array of exactly 3 strings. No explanation, no markdown
                     {"role": "user", "content": user_prompt}
                 ],
                 temperature=0.95,
-                max_tokens=1800
+                max_tokens=400
             )
             text = response.choices[0].message.content.strip()
             
@@ -710,6 +614,17 @@ Output ONLY a valid JSON array of exactly 3 strings. No explanation, no markdown
         except Exception as e:
             print(f"Groq error: {e}")
             if attempt == max_retries - 1:
+                if "429" in str(e) or "rate limit" in str(e).lower():
+                    global LAST_RATE_LIMIT_ALERT_TIME
+                    current_time = time.time()
+                    if current_time - LAST_RATE_LIMIT_ALERT_TIME > 3600: # 1 hour throttle
+                        try:
+                            from backend.services.email_service import send_groq_rate_limit_alert
+                            send_groq_rate_limit_alert(business_name, str(e))
+                            LAST_RATE_LIMIT_ALERT_TIME = current_time
+                        except Exception as email_e:
+                            print(f"Failed to send rate limit alert: {email_e}")
+                
                 fallbacks = [get_fallback_review(business_name, 'hinglish' if (plan == 'premium' and i >= 3) else 'english', i) for i in range(variant_count)]
                 final_reviews = fallbacks
 
@@ -748,7 +663,7 @@ Return ONLY JSON array (3-5 insights). Structure:
             model="llama-3.3-70b-versatile",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3,
-            max_tokens=1500
+            max_tokens=500
         )
         text = response.choices[0].message.content.strip()
         text = text.replace('```json', '').replace('```', '').strip()
