@@ -191,7 +191,7 @@ Each review MUST follow a DIFFERENT structure:
 🔁 WORD REPETITION CONTROL
 - Same verb cannot repeat across reviews (e.g., visited, tried, ordered, consulted)
 - Same adjective cannot repeat more than 2 times total
-- Same dish/service name cannot repeat more than ONCE
+- VERY IMPORTANT: The customer's selected items must be repeated across ALL reviews as instructed. Do NOT avoid repeating the selected item names.
 
 🏪 CATEGORY-AWARE WRITING
 Use correct business context:
@@ -509,7 +509,7 @@ async def generate_reviews(
 
     place_word = cat_ctx["place_word"]
     avoid_str = ", ".join(cat_ctx["avoid_words"]) if cat_ctx["avoid_words"] else "none"
-    items_list = selected_items[:3] if selected_items else []
+    items_list = selected_items[:5] if selected_items else []
     services_str = ", ".join(items_list) if items_list else "general experience"
     value_perception = kwargs.get("value_perception", "")
 
@@ -544,8 +544,8 @@ Business Details:
 - Name: {business_name}
 - Category: {category}
 - City: {business_location}
-- Dishes customer selected: {services_str}
-- DISH MENTION RULE: If dishes are provided above, you MUST naturally mention at least ONE dish name in the reviews. Do not skip this. Weave it naturally — never list all dishes, pick the most interesting one.
+- Customer's selected items: {services_str}
+- MANDATORY ITEMS RULE: If items are provided above, you MUST naturally mention ALL of them in EVERY SINGLE REVIEW VARIANT. Do not skip any item. Do not substitute them. Every generated review MUST contain all of these exact items.
 - Session seed (do not output): {session_id}
 - Customer rating: {overall_rating}/5
 - Value perception: {value_perception if value_perception else "not specified"} — if specified, mention naturally in exactly 1 review only
@@ -590,8 +590,8 @@ Business Details:
 - Name: {business_name}
 - Category: {category}
 - City: {business_location}
-- Dishes customer selected: {services_str}
-- DISH MENTION RULE: If dishes are provided above, you MUST naturally mention at least ONE dish name in the reviews. Do not skip this. Weave it naturally — never list all dishes, pick the most interesting one.
+- Customer's selected items: {services_str}
+- MANDATORY ITEMS RULE: If items are provided above, you MUST naturally mention ALL of them in EVERY SINGLE REVIEW VARIANT. Do not skip any item. Do not substitute them. Every generated review MUST contain all of these exact items.
 - Session seed (do not output): {session_id}
 - Customer rating: {overall_rating}/5
 - Value perception: {value_perception if value_perception else "not specified"} — if specified, mention naturally in exactly 1 review only
@@ -630,83 +630,100 @@ Output ONLY a valid JSON array of exactly 3 strings. No explanation, no markdown
 """
         variant_count = 3
 
-    try:
-        response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_prompt}
-            ],
-            temperature=0.95,
-            max_tokens=1800
-        )
-        text = response.choices[0].message.content.strip()
-        
-        import re
-        match = re.search(r'\[.*\]', text, re.DOTALL)
-        if match:
-            text = match.group(0)
-            
-        text = text.replace('```json', '').replace('```', '').strip()
-        
-        try:
-            parsed = json.loads(text)
-            variants = parsed if isinstance(parsed, list) else []
-        except Exception as e:
-            print(f"Failed to parse JSON from Groq: {e}\nRaw Text: {text}")
-            variants = []
-        
-        cleaned = [v.strip() for v in variants if isinstance(v, str) and len(v.strip()) > 10]
+    _place = cat_ctx["place_word"]
+    _non_dining = _place.lower() not in ["restaurant", "fine dining"]
+    print(f"[DEBUG] category={category}, place_word={_place}, non_dining={_non_dining}")
 
-        # POST-PROCESSING — Enforce correct category language
-        import re
-        _place = cat_ctx["place_word"]
-        _non_dining = _place.lower() not in ["restaurant", "fine dining"]
-        print(f"[DEBUG] category={category}, place_word={_place}, non_dining={_non_dining}")
-        enforced = []
-        for review in cleaned:
-            fixed = review
-            fixed = re.sub(r'\brestaurant\b', _place, fixed, flags=re.IGNORECASE)
-            print(f"[DEBUG] BEFORE: {review[:60]} | AFTER: {fixed[:60]}")
-            if _non_dining:
-                fixed = re.sub(r'\bdinner kiya\b', f'{_place} visit kiya', fixed, flags=re.IGNORECASE)
-                fixed = re.sub(r'\blunch kiya\b', f'{_place} visit kiya', fixed, flags=re.IGNORECASE)
-                fixed = re.sub(r'\bdinner\b', 'visit', fixed, flags=re.IGNORECASE)
-                fixed = re.sub(r'\blunch\b', 'visit', fixed, flags=re.IGNORECASE)
-            enforced.append(fixed)
-        cleaned = enforced
-        
-        while len(cleaned) < variant_count:
-            lang = 'hinglish' if (plan == 'premium' and len(cleaned) >= 3) else 'english'
-            cleaned.append(get_fallback_review(business_name, lang, len(cleaned)))
+    max_retries = 3
+    final_reviews = []
+    
+    for attempt in range(max_retries):
+        try:
+            response = client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": user_prompt}
+                ],
+                temperature=0.95,
+                max_tokens=1800
+            )
+            text = response.choices[0].message.content.strip()
             
-        final_reviews = cleaned[:variant_count]
-        
-        if return_debug:
-            return {
-                "reviews": final_reviews,
-                "place_word": _place,
-                "avoid_words": avoid_str.split(", ") if avoid_str else [],
-                "storyteller_context": _r2_context,
-                "r1_opener": _r1_opener,
-                "r3_issue": _r3_issue
-            }
+            import re
+            match = re.search(r'\[.*\]', text, re.DOTALL)
+            if match:
+                text = match.group(0)
+                
+            text = text.replace('```json', '').replace('```', '').strip()
             
-        return final_reviews
+            try:
+                parsed = json.loads(text)
+                variants = parsed if isinstance(parsed, list) else []
+            except Exception as e:
+                print(f"Failed to parse JSON from Groq: {e}\nRaw Text: {text}")
+                variants = []
+            
+            cleaned = [v.strip() for v in variants if isinstance(v, str) and len(v.strip()) > 10]
+
+            is_valid = True
+            for review in cleaned:
+                for item in items_list:
+                    if item.lower() not in review.lower():
+                        is_valid = False
+                        print(f"[DEBUG] Attempt {attempt+1}: Review missing item '{item}': {review[:50]}...")
+                        break
+                if not is_valid: break
+                
+            if is_valid and len(cleaned) >= variant_count:
+                unique_reviews = set(cleaned)
+                if len(unique_reviews) < len(cleaned):
+                    print(f"[DEBUG] Attempt {attempt+1}: Found duplicate reviews. Retrying...")
+                    is_valid = False
+
+            if not is_valid and attempt < max_retries - 1:
+                print(f"[DEBUG] Retrying generation... (Attempt {attempt + 1}/{max_retries})")
+                continue
+                
+            if not is_valid and attempt == max_retries - 1:
+                print(f"[CRITICAL WARNING] Review generation failed to include all items or avoid duplicates after {max_retries} attempts.")
+
+            enforced = []
+            for review in cleaned:
+                fixed = review
+                fixed = re.sub(r'\brestaurant\b', _place, fixed, flags=re.IGNORECASE)
+                if _non_dining:
+                    fixed = re.sub(r'\bdinner kiya\b', f'{_place} visit kiya', fixed, flags=re.IGNORECASE)
+                    fixed = re.sub(r'\blunch kiya\b', f'{_place} visit kiya', fixed, flags=re.IGNORECASE)
+                    fixed = re.sub(r'\bdinner\b', 'visit', fixed, flags=re.IGNORECASE)
+                    fixed = re.sub(r'\blunch\b', 'visit', fixed, flags=re.IGNORECASE)
+                enforced.append(fixed)
+            cleaned = enforced
+            
+            while len(cleaned) < variant_count:
+                lang = 'hinglish' if (plan == 'premium' and len(cleaned) >= 3) else 'english'
+                cleaned.append(get_fallback_review(business_name, lang, len(cleaned)))
+                
+            final_reviews = cleaned[:variant_count]
+            break
+            
+        except Exception as e:
+            print(f"Groq error: {e}")
+            if attempt == max_retries - 1:
+                fallbacks = [get_fallback_review(business_name, 'hinglish' if (plan == 'premium' and i >= 3) else 'english', i) for i in range(variant_count)]
+                final_reviews = fallbacks
+
+    if return_debug:
+        return {
+            "reviews": final_reviews,
+            "place_word": _place,
+            "avoid_words": avoid_str.split(", ") if avoid_str else [],
+            "storyteller_context": _r2_context,
+            "r1_opener": _r1_opener,
+            "r3_issue": _r3_issue
+        }
         
-    except Exception as e:
-        print(f"Groq error: {e}")
-        fallbacks = [get_fallback_review(business_name, 'hinglish' if (plan == 'premium' and i >= 3) else 'english', i) for i in range(variant_count)]
-        if return_debug:
-            return {
-                "reviews": fallbacks,
-                "place_word": cat_ctx.get("place_word", ""),
-                "avoid_words": [],
-                "storyteller_context": "",
-                "r1_opener": "",
-                "r3_issue": ""
-            }
-        return fallbacks
+    return final_reviews
 
 async def generate_business_insights(data: dict) -> list[dict]:
     prompt = f"""You are a business advisor for Indian local businesses. Be specific and data-driven.
