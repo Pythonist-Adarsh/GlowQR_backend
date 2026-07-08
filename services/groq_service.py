@@ -241,22 +241,28 @@ You MUST subtly optimize reviews for LOCAL SEO without triggering spam signals.
 - DO NOT force keywords, repeat them, or sound like an advertisement. Maintain human tone over SEO.
 """
 
-def get_fallback_review(business_name: str, language: str, index: int) -> str:
+def get_fallback_review(business_name: str, language: str, index: int, selected_items: list = None) -> str:
     name = business_name or 'this place'
+    
+    items_text = ""
+    if selected_items:
+        items_str = ", ".join(selected_items)
+        items_text = f" I especially enjoyed the {items_str}." if language == 'english' else f" Inka {items_str} zaroor try karna."
+
     fallbacks = {
         'english': [
-            f"Came here on a whim and left happy. {name} is worth the visit.",
-            f"Service was quick and the food was fresh. Pretty good overall.",
-            f"Decent spot. Was a bit busy when we went but the food made up for the wait.",
-            f"Tried a few things off the menu — most were solid. Will probably stop by again.",
-            f"Nice place to hang out. Staff were friendly and didn't rush us."
+            f"Came here on a whim and left happy. {name} is worth the visit.{items_text}",
+            f"Service was quick and the food was fresh. Pretty good overall.{items_text}",
+            f"Decent spot. Was a bit busy when we went but the food made up for the wait.{items_text}",
+            f"Tried a few things off the menu — most were solid. Will probably stop by again.{items_text}",
+            f"Nice place to hang out. Staff were friendly and didn't rush us.{items_text}"
         ],
         'hinglish': [
-            f"{name} ne genuinely surprise kar diya. Khana fresh tha aur price bhi reasonable.",
-            f"Service thodi slow thi but khana worth it tha. Overall experience acha raha.",
-            f"Friends ke saath gaye the, sab ko pasand aaya. Dobara jaenge.",
-            f"Taste mein koi compromise nahi. Ek baar try karna chahiye.",
-            f"Ambiance acha hai, staff helpful tha. Solid evening rahi."
+            f"{name} ne genuinely surprise kar diya. Khana fresh tha aur price bhi reasonable.{items_text}",
+            f"Service thodi slow thi but khana worth it tha. Overall experience acha raha.{items_text}",
+            f"Friends ke saath gaye the, sab ko pasand aaya. Dobara jaenge.{items_text}",
+            f"Taste mein koi compromise nahi. Ek baar try karna chahiye.{items_text}",
+            f"Ambiance acha hai, staff helpful tha. Solid evening rahi.{items_text}"
         ]
     }
     options = fallbacks.get(language.lower(), fallbacks['english'])
@@ -606,7 +612,7 @@ Output ONLY a valid JSON array of exactly 3 strings. No explanation, no markdown
             
             while len(cleaned) < variant_count:
                 lang = 'hinglish' if (plan == 'premium' and len(cleaned) >= 3) else 'english'
-                cleaned.append(get_fallback_review(business_name, lang, len(cleaned)))
+                cleaned.append(get_fallback_review(business_name, lang, len(cleaned), selected_items))
                 
             final_reviews = cleaned[:variant_count]
             break
@@ -625,7 +631,7 @@ Output ONLY a valid JSON array of exactly 3 strings. No explanation, no markdown
                         except Exception as email_e:
                             print(f"Failed to send rate limit alert: {email_e}")
                 
-                fallbacks = [get_fallback_review(business_name, 'hinglish' if (plan == 'premium' and i >= 3) else 'english', i) for i in range(variant_count)]
+                fallbacks = [get_fallback_review(business_name, 'hinglish' if (plan == 'premium' and i >= 3) else 'english', i, selected_items) for i in range(variant_count)]
                 final_reviews = fallbacks
 
     if return_debug:
