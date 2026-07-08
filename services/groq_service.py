@@ -248,18 +248,18 @@ def get_fallback_review(business_name: str, language: str, index: int, selected_
 
     fallbacks = {
         'english': [
-            f"Came here on a whim and left happy. {name} is worth the visit." + (f" I especially enjoyed the {items_str}." if items_str else ""),
-            f"Service was quick and the food was fresh. Pretty good overall." + (f" Tried the {items_str} and it was great." if items_str else ""),
-            f"Decent spot. Was a bit busy when we went but the food made up for the wait." + (f" The {items_str} really stood out." if items_str else ""),
-            f"Tried a few things off the menu — most were solid. Will probably stop by again." + (f" Loved the {items_str}." if items_str else ""),
-            f"Nice place to hang out. Staff were friendly and didn't rush us." + (f" Highly recommend checking out the {items_str}." if items_str else "")
+            f"Great experience from start to finish. {name} is worth the visit." + (f" I especially liked the {items_str}." if items_str else ""),
+            f"Service was quick and everything was handled professionally. Pretty good overall." + (f" Tried the {items_str} and it was great." if items_str else ""),
+            f"Decent place. Was a bit busy when we went but the smooth service made up for the wait." + (f" The {items_str} really stood out." if items_str else ""),
+            f"Tried a few things and most were solid. Will probably return again." + (f" Loved the {items_str}." if items_str else ""),
+            f"Nice environment. Staff were friendly, helpful, and didn't rush us." + (f" Highly recommend checking out the {items_str}." if items_str else "")
         ],
         'hinglish': [
-            f"{name} ne genuinely surprise kar diya. Khana fresh tha aur price bhi reasonable." + (f" Inka {items_str} zaroor try karna." if items_str else ""),
-            f"Service thodi slow thi but khana worth it tha. Overall experience acha raha." + (f" {items_str} kaafi acha tha." if items_str else ""),
-            f"Friends ke saath gaye the, sab ko pasand aaya. Dobara jaenge." + (f" Specially {items_str} ne dil khush kar diya." if items_str else ""),
-            f"Taste mein koi compromise nahi. Ek baar try karna chahiye." + (f" {items_str} was amazing." if items_str else ""),
-            f"Ambiance acha hai, staff helpful tha. Solid evening rahi." + (f" Make sure to order the {items_str}." if items_str else "")
+            f"{name} ne genuinely surprise kar diya. Service achi thi aur price bhi reasonable." + (f" Inka {items_str} zaroor try karna." if items_str else ""),
+            f"Thoda wait karna pada but experience worth it tha. Overall sab kuch acha raha." + (f" {items_str} kaafi acha tha." if items_str else ""),
+            f"Sab ko yahan aake pasand aaya. Dobara zaroor aana chahenge." + (f" Specially {items_str} ne dil khush kar diya." if items_str else ""),
+            f"Quality mein koi compromise nahi. Ek baar try karna chahiye." + (f" {items_str} was amazing." if items_str else ""),
+            f"Ambiance acha hai, staff helpful tha. Solid experience raha." + (f" Make sure to ask for {items_str}." if items_str else "")
         ]
     }
     options = fallbacks.get(language.lower(), fallbacks['english'])
@@ -546,16 +546,40 @@ Output ONLY a valid JSON array of exactly 3 strings. No explanation, no markdown
     
     for attempt in range(max_retries):
         try:
-            response = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=[
-                    {"role": "system", "content": SYSTEM_PROMPT},
-                    {"role": "user", "content": user_prompt}
-                ],
-                temperature=0.95,
-                max_tokens=400
-            )
-            text = response.choices[0].message.content.strip()
+            text = ""
+            try:
+                response = client.chat.completions.create(
+                    model="llama-3.3-70b-versatile",
+                    messages=[
+                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {"role": "user", "content": user_prompt}
+                    ],
+                    temperature=0.95,
+                    max_tokens=400
+                )
+                text = response.choices[0].message.content.strip()
+            except Exception as groq_err:
+                print(f"[DEBUG] Groq API Failed: {groq_err}")
+                together_key = os.environ.get("TOGETHER_API_KEY")
+                if together_key:
+                    print("[DEBUG] Failing over to Together AI...")
+                    import openai
+                    together_client = openai.OpenAI(
+                        api_key=together_key,
+                        base_url="https://api.together.xyz/v1",
+                    )
+                    response = together_client.chat.completions.create(
+                        model="meta-llama/Llama-3.3-70B-Instruct-Turbo",
+                        messages=[
+                            {"role": "system", "content": SYSTEM_PROMPT},
+                            {"role": "user", "content": user_prompt}
+                        ],
+                        temperature=0.95,
+                        max_tokens=400
+                    )
+                    text = response.choices[0].message.content.strip()
+                else:
+                    raise groq_err
             
             import re
             match = re.search(r'\[.*\]', text, re.DOTALL)
@@ -609,9 +633,11 @@ Output ONLY a valid JSON array of exactly 3 strings. No explanation, no markdown
             
             while len(cleaned) < variant_count:
                 lang = 'hinglish' if (plan == 'premium' and len(cleaned) >= 3) else 'english'
+                print("[DEBUG] GROQ_FALLBACK_USED")
                 cleaned.append(get_fallback_review(business_name, lang, len(cleaned), selected_items))
                 
             final_reviews = cleaned[:variant_count]
+            print(f"[DEBUG] GROQ_SUCCESS ({len(cleaned)} AI variants generated)")
             break
             
         except Exception as e:
@@ -628,6 +654,7 @@ Output ONLY a valid JSON array of exactly 3 strings. No explanation, no markdown
                         except Exception as email_e:
                             print(f"Failed to send rate limit alert: {email_e}")
                 
+                print("[DEBUG] GROQ_FALLBACK_USED (Total Groq Failure)")
                 fallbacks = [get_fallback_review(business_name, 'hinglish' if (plan == 'premium' and i >= 3) else 'english', i, selected_items) for i in range(variant_count)]
                 final_reviews = fallbacks
 
