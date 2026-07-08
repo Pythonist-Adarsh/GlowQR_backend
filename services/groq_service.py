@@ -128,8 +128,8 @@ CATEGORY_LANGUAGE_MAP = {
     "real estate": {
         "place_word": "agency",
         "visit_word": "consulted",
-        "experience_words": ["agent", "property", "deal", "broker", "site visit", "transparent", "registry", "residential", "commercial", "rental"],
-        "avoid_words": ["food", "meal", "dinner", "dish", "haircut", "treatment", "best in the market", "highly recommended service", "smooth and hassle-free experience"],
+        "experience_words": ["agent", "property", "deal", "broker", "site visit", "transparent", "registry", "residential", "commercial", "rental", "response time", "follow-up", "documentation turnaround"],
+        "avoid_words": ["food", "meal", "dinner", "dish", "haircut", "treatment", "best in the market", "highly recommended service", "smooth and hassle-free experience", "queue", "waiting in line"],
     },
 }
 
