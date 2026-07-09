@@ -15,7 +15,8 @@ class User(Base):
     avatar_url = Column(String, nullable=True)
     google_id = Column(String, unique=True, index=True, nullable=True)
     is_active = Column(Boolean, default=True)
-    
+    account_status = Column(String, default="active") # active, trashed
+    deleted_at = Column(DateTime(timezone=True), nullable=True)    
     # Subscription / Billing
     plan = Column(String, default="trial")
     billing_cycle = Column(String, default="monthly")

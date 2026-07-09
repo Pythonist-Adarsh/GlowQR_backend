@@ -22,6 +22,10 @@ add_column("public.scan_events", "day_of_week", "INTEGER")
 # Add website_url to businesses
 add_column("public.businesses", "website_url", "VARCHAR")
 
+# Soft delete additions to users
+add_column("public.users", "account_status", "VARCHAR DEFAULT 'active'")
+add_column("public.users", "deleted_at", "TIMESTAMP WITH TIME ZONE")
+
 # Create new tables (DailyAnalytics, OnboardingRecord)
 Base.metadata.create_all(bind=engine)
 print("Schema update complete.")

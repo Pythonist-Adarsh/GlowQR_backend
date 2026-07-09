@@ -233,6 +233,7 @@ def reject_upgrade_patch(id: int, reason: dict, db: Session = Depends(get_db), v
 @router.get("/users")
 def get_users_list(plan: str = 'all', search: str = '', city: str = 'all', db: Session = Depends(get_db), verified: bool = Depends(verify_admin)):
     query = db.query(models.User, models.Business).outerjoin(models.Business, models.User.id == models.Business.owner_id)
+    query = query.filter(models.User.account_status != 'trashed')
     
     if plan != 'all':
         query = query.filter(models.User.plan == plan)
@@ -634,8 +635,78 @@ def get_business_admin_detail(business_id: int, db: Session = Depends(get_db), v
         "session_stats": session_stats
     }
 
+@router.get("/trashed-users")
+def get_trashed_users_list(search: str = '', db: Session = Depends(get_db), verified: bool = Depends(verify_admin)):
+    query = db.query(models.User, models.Business).outerjoin(models.Business, models.User.id == models.Business.owner_id)
+    query = query.filter(models.User.account_status == 'trashed')
+    
+    if search:
+        search = f"%{search}%"
+        query = query.filter(
+            (models.User.email.ilike(search)) |
+            (models.User.full_name.ilike(search)) |
+            (models.Business.name.ilike(search))
+        )
+        
+    results = query.all()
+    
+    users_data = []
+    for user, business in results:
+        active_qr_count = 0
+        if business:
+            active_qr_count = db.query(models.QRCode).filter(
+                models.QRCode.business_id == business.id,
+                models.QRCode.is_active == True
+            ).count()
+            
+        users_data.append({
+            "id": user.id,
+            "email": user.email,
+            "full_name": user.full_name,
+            "phone": user.phone,
+            "plan": user.plan,
+            "billing_cycle": user.billing_cycle,
+            "plan_expires_at": user.plan_expires_at,
+            "deleted_at": user.deleted_at,
+            "business": {
+                "name": business.name if business else None,
+                "city": business.city if business else None,
+                "category": business.category if business else None,
+            },
+            "active_qr_count": active_qr_count
+        })
+        
+    return {"users": users_data}
+
 @router.delete("/user/{user_id}")
 def delete_user(user_id: int, db: Session = Depends(get_db), verified: bool = Depends(verify_admin)):
+    usr = db.query(models.User).filter(models.User.id == user_id).first()
+    if not usr:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    usr.account_status = 'trashed'
+    from datetime import datetime, timezone
+    usr.deleted_at = datetime.now(timezone.utc)
+    
+    businesses = db.query(models.Business).filter(models.Business.owner_id == user_id).all()
+    for b in businesses:
+        qr_codes = db.query(models.QRCode).filter(models.QRCode.business_id == b.id).all()
+        for qr in qr_codes:
+            qr.is_active = False
+
+    db.commit()
+    return {"message": "User moved to trash successfully"}
+
+class HardDeleteRequest(BaseModel):
+    admin_pin: str
+
+@router.delete("/user/{user_id}/hard")
+def hard_delete_user(user_id: int, req: HardDeleteRequest, db: Session = Depends(get_db), verified: bool = Depends(verify_admin)):
+    settings = db.query(models.AdminSettings).first()
+    from security import verify_password
+    if not settings or not verify_password(req.admin_pin, settings.admin_password_hash):
+        raise HTTPException(status_code=403, detail="Invalid admin password/PIN")
+
     usr = db.query(models.User).filter(models.User.id == user_id).first()
     if not usr:
         raise HTTPException(status_code=404, detail="User not found")
@@ -661,7 +732,30 @@ def delete_user(user_id: int, db: Session = Depends(get_db), verified: bool = De
     db.query(models.User).filter(models.User.id == user_id).delete(synchronize_session=False)
 
     db.commit()
-    return {"success": True, "message": "User and all associated data deleted"}
+    return {"message": "User permanently deleted"}
+
+@router.post("/user/{user_id}/restore")
+def restore_user(user_id: int, db: Session = Depends(get_db), verified: bool = Depends(verify_admin)):
+    usr = db.query(models.User).filter(models.User.id == user_id).first()
+    if not usr:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    usr.account_status = 'active'
+    usr.deleted_at = None
+    usr.plan = 'expired'
+    
+    db.commit()
+    
+    # Send expired alert to user
+    settings = db.query(models.AdminSettings).first()
+    upi_id = settings.upi_id if settings else ""
+    from services.email_service import send_expired_alert
+    try:
+        send_expired_alert(owner_email=usr.email, owner_name=usr.full_name or "User", upi_id=upi_id)
+    except Exception as e:
+        print(f"Failed to send restore/expired alert: {e}")
+        
+    return {"message": "User restored and marked as expired"}
 
 @router.get("/businesses-list")
 def get_businesses_list(db: Session = Depends(get_db), verified: bool = Depends(verify_admin)):
