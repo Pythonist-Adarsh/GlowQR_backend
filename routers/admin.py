@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Header, Query, Request, C
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from database import get_db
+from pydantic import BaseModel
 import models, schemas
 import os
 import csv
