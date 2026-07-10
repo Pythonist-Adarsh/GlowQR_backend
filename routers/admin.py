@@ -814,3 +814,102 @@ def update_review_url(business_id: int, data: schemas.ReviewUrlUpdate, db: Sessi
     db.commit()
     db.refresh(business)
     return {"google_place_id": business.place_id, "google_review_url": business.google_review_url}
+
+@router.get("/payment-orders")
+def get_payment_orders(status: str = 'utr_submitted', db: Session = Depends(get_db), verified: bool = Depends(verify_admin)):
+    query = db.query(models.PaymentOrder, models.Business, models.User).join(models.Business, models.PaymentOrder.business_id == models.Business.id).join(models.User, models.Business.owner_id == models.User.id)
+    
+    if status != 'all':
+        query = query.filter(models.PaymentOrder.status == status)
+        
+    results = query.order_by(models.PaymentOrder.created_at.desc()).all()
+    
+    orders = []
+    for order, business, user in results:
+        orders.append({
+            "id": order.id,
+            "business_name": business.name,
+            "contact_name": user.full_name,
+            "email": user.email,
+            "phone": user.phone,
+            "plan_name": order.plan_name,
+            "amount": order.amount,
+            "status": order.status,
+            "utr_reference": order.utr_reference,
+            "created_at": order.created_at,
+            "utr_submitted_at": order.utr_submitted_at,
+            "rejection_reason": order.rejection_reason
+        })
+        
+    return {"orders": orders}
+
+@router.post("/payment-orders/{order_id}/verify")
+def verify_payment_order(order_id: str, db: Session = Depends(get_db), verified: bool = Depends(verify_admin)):
+    order = db.query(models.PaymentOrder).filter(models.PaymentOrder.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+    if order.status != 'utr_submitted':
+        raise HTTPException(status_code=400, detail=f"Order is not in utr_submitted state (current: {order.status})")
+        
+    order.status = 'verified'
+    now = datetime.now(timezone.utc)
+    order.verified_at = now
+    order.verified_by_admin = "admin" # from verified dependency
+    
+    user = db.query(models.User).join(models.Business, models.Business.owner_id == models.User.id).filter(models.Business.id == order.business_id).first()
+    business = db.query(models.Business).filter(models.Business.id == order.business_id).first()
+    
+    if user:
+        if 'premium' in order.plan_name.lower():
+            plan_req = 'premium'
+        else:
+            plan_req = 'basic'
+            
+        if 'yearly' in order.plan_name.lower():
+            billing_cycle = 'yearly'
+            expires_at = now + timedelta(days=365)
+        else:
+            billing_cycle = 'monthly'
+            expires_at = now + timedelta(days=30)
+            
+        user.plan = plan_req
+        user.billing_cycle = billing_cycle
+        user.plan_expires_at = expires_at
+        user.renewal_reminder_sent = False
+        
+        # Activate QR codes
+        qr_codes = db.query(models.QRCode).filter(models.QRCode.business_id == business.id).all()
+        for qr in qr_codes:
+            qr.is_active = True
+            
+        sub = models.Subscription(
+            user_id=user.id,
+            plan=plan_req,
+            status='active',
+            current_period_start=now,
+            current_period_end=expires_at,
+            amount_paise=order.amount * 100
+        )
+        db.add(sub)
+        
+        # We can simulate sending the activation email if needed
+        try:
+            send_activation_email(user, business.name, plan_req, expires_at)
+        except Exception as e:
+            print(f"Failed to send activation email: {e}")
+
+    db.commit()
+    
+    return {"message": "Payment order verified and plan activated successfully"}
+
+@router.post("/payment-orders/{order_id}/reject")
+def reject_payment_order(order_id: str, data: schemas.PaymentOrderReject, db: Session = Depends(get_db), verified: bool = Depends(verify_admin)):
+    order = db.query(models.PaymentOrder).filter(models.PaymentOrder.id == order_id).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="Order not found")
+        
+    order.status = 'rejected'
+    order.rejection_reason = data.rejection_reason
+    db.commit()
+    
+    return {"message": "Payment order rejected successfully"}

@@ -278,3 +278,33 @@ class UpdateAlertRequest(BaseModel):
 class ReviewUrlUpdate(BaseModel):
     place_id: str
 
+# --- Payment Orders ---
+class PaymentOrderCreate(BaseModel):
+    plan_name: str
+    amount: int
+    billing_cycle: str = "monthly"
+
+class PaymentOrderSubmitUTR(BaseModel):
+    order_id: str
+    utr_reference: str
+
+class PaymentOrderReject(BaseModel):
+    rejection_reason: str
+
+class PaymentOrderResponse(BaseModel):
+    id: str
+    business_id: int
+    plan_name: str
+    amount: int
+    currency: str
+    status: str
+    upi_transaction_note: str
+    utr_reference: Optional[str] = None
+    created_at: datetime
+    utr_submitted_at: Optional[datetime] = None
+    verified_at: Optional[datetime] = None
+    verified_by_admin: Optional[str] = None
+    rejection_reason: Optional[str] = None
+
+    class Config:
+        from_attributes = True

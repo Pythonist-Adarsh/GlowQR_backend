@@ -357,3 +357,22 @@ class BombAlert(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     business = relationship("Business", backref="bomb_alerts")
+
+class PaymentOrder(Base):
+    __tablename__ = "payment_orders"
+
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()), index=True)
+    business_id = Column(Integer, ForeignKey("businesses.id", ondelete="CASCADE"))
+    plan_name = Column(String)
+    amount = Column(Integer)
+    currency = Column(String, default="INR")
+    status = Column(String, default="pending") # pending, utr_submitted, verified, rejected
+    upi_transaction_note = Column(String, unique=True, index=True)
+    utr_reference = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    utr_submitted_at = Column(DateTime(timezone=True), nullable=True)
+    verified_at = Column(DateTime(timezone=True), nullable=True)
+    verified_by_admin = Column(String, nullable=True)
+    rejection_reason = Column(String, nullable=True)
+
+    business = relationship("Business", backref="payment_orders")
