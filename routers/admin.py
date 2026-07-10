@@ -320,19 +320,34 @@ def get_revenue_data(db: Session = Depends(get_db), verified: bool = Depends(ver
     first_of_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     first_of_last_month = (first_of_month - timedelta(days=1)).replace(day=1)
     
-    this_month = db.query(func.sum(models.UpgradeRequest.amount_paid)).filter(
+    this_month_old = db.query(func.sum(models.UpgradeRequest.amount_paid)).filter(
         models.UpgradeRequest.status == 'verified',
         models.UpgradeRequest.activated_at >= first_of_month
     ).scalar() or 0
     
-    last_month = db.query(func.sum(models.UpgradeRequest.amount_paid)).filter(
+    last_month_old = db.query(func.sum(models.UpgradeRequest.amount_paid)).filter(
         models.UpgradeRequest.status == 'verified',
         models.UpgradeRequest.activated_at >= first_of_last_month,
         models.UpgradeRequest.activated_at < first_of_month
     ).scalar() or 0
     
-    all_time = db.query(func.sum(models.UpgradeRequest.amount_paid)).filter(
+    all_time_old = db.query(func.sum(models.UpgradeRequest.amount_paid)).filter(
         models.UpgradeRequest.status == 'verified'
+    ).scalar() or 0
+
+    this_month_new = db.query(func.sum(models.PaymentOrder.amount)).filter(
+        models.PaymentOrder.status == 'verified',
+        models.PaymentOrder.verified_at >= first_of_month
+    ).scalar() or 0
+    
+    last_month_new = db.query(func.sum(models.PaymentOrder.amount)).filter(
+        models.PaymentOrder.status == 'verified',
+        models.PaymentOrder.verified_at >= first_of_last_month,
+        models.PaymentOrder.verified_at < first_of_month
+    ).scalar() or 0
+    
+    all_time_new = db.query(func.sum(models.PaymentOrder.amount)).filter(
+        models.PaymentOrder.status == 'verified'
     ).scalar() or 0
     
     basic_count = db.query(models.Subscription).filter(
@@ -347,35 +362,83 @@ def get_revenue_data(db: Session = Depends(get_db), verified: bool = Depends(ver
         models.Subscription.current_period_end > now
     ).count()
     
-    transactions = db.query(models.UpgradeRequest).filter(
+    transactions_old = db.query(models.UpgradeRequest).filter(
         models.UpgradeRequest.status == 'verified'
-    ).order_by(models.UpgradeRequest.activated_at.desc()).limit(100).all()
+    ).all()
+    
+    transactions_new = db.query(models.PaymentOrder, models.Business, models.User).join(
+        models.Business, models.PaymentOrder.business_id == models.Business.id
+    ).join(
+        models.User, models.Business.owner_id == models.User.id
+    ).filter(
+        models.PaymentOrder.status == 'verified'
+    ).all()
+    
+    combined = []
+    for t in transactions_old:
+        combined.append({
+            "id": f"old_{t.id}",
+            "business_name": t.business_name,
+            "plan_requested": t.plan_requested,
+            "amount_paid": t.amount_paid,
+            "utr_number": t.utr_number,
+            "activated_at": t.activated_at.isoformat() if t.activated_at else None,
+            "expires_at": t.expires_at.isoformat() if t.expires_at else None
+        })
+        
+    for order, bus, usr in transactions_new:
+        combined.append({
+            "id": f"new_{order.id}",
+            "business_name": bus.name,
+            "plan_requested": order.plan_name.split()[0].lower() if order.plan_name else "unknown",
+            "amount_paid": order.amount * 100,
+            "utr_number": order.utr_reference,
+            "activated_at": order.verified_at.isoformat() if order.verified_at else None,
+            "expires_at": usr.plan_expires_at.isoformat() if usr.plan_expires_at else None
+        })
+        
+    combined.sort(key=lambda x: x['activated_at'] or "", reverse=True)
     
     return {
         "summary": {
-            "this_month": this_month / 100,
-            "last_month": last_month / 100,
-            "all_time": all_time / 100,
+            "this_month": (this_month_old / 100) + this_month_new,
+            "last_month": (last_month_old / 100) + last_month_new,
+            "all_time": (all_time_old / 100) + all_time_new,
             "mrr": (basic_count * 199) + (premium_count * 499),
             "basic_count": basic_count,
             "premium_count": premium_count
         },
-        "transactions": transactions
+        "transactions": combined[:100]
     }
 
 @router.get("/revenue/export")
 def export_revenue(db: Session = Depends(get_db), verified: bool = Depends(verify_admin)):
-    transactions = db.query(models.UpgradeRequest).filter(
+    transactions_old = db.query(models.UpgradeRequest).filter(
         models.UpgradeRequest.status == 'verified'
+    ).all()
+    
+    transactions_new = db.query(models.PaymentOrder, models.Business, models.User).join(
+        models.Business, models.PaymentOrder.business_id == models.Business.id
+    ).join(
+        models.User, models.Business.owner_id == models.User.id
+    ).filter(
+        models.PaymentOrder.status == 'verified'
     ).all()
     
     si = StringIO()
     cw = csv.writer(si)
     cw.writerow(['ID', 'Business Name', 'Plan', 'Amount (Rs)', 'UTR', 'Activated At', 'Expires At'])
-    for t in transactions:
+    
+    for t in transactions_old:
         cw.writerow([
-            t.id, t.business_name, t.plan_requested, t.amount_paid/100 if t.amount_paid else 0, 
+            f"old_{t.id}", t.business_name, t.plan_requested, t.amount_paid/100 if t.amount_paid else 0, 
             t.utr_number, t.activated_at, t.expires_at
+        ])
+        
+    for order, bus, usr in transactions_new:
+        cw.writerow([
+            f"new_{order.id}", bus.name, order.plan_name, order.amount,
+            order.utr_reference, order.verified_at, usr.plan_expires_at
         ])
         
     return Response(content=si.getvalue(), media_type="text/csv", headers={"Content-Disposition": "attachment; filename=revenue.csv"})
