@@ -4,32 +4,76 @@ from typing import List
 from database import get_db
 from models import HealthCheckScan
 from schemas_health import SearchRequest, PlaceResult, ScanRequest, ScanResponse, CaptureLeadRequest, CompetitorData
-from services.serpapi_service import search_places, fetch_place_details, fetch_competitors
+from services.places_service import autocomplete_search, fetch_place_details, fetch_nearby_competitors
 
 router = APIRouter(prefix="/api/health-check", tags=["Health Checker"])
 
 @router.post("/search", response_model=List[PlaceResult])
 def search_business(req: SearchRequest):
-    results = search_places(req.query, req.lat, req.lng)
+    results = autocomplete_search(req.query, req.session_token)
     return results
 
 @router.post("/scan", response_model=ScanResponse)
 def run_scan(req: ScanRequest, db: Session = Depends(get_db)):
     # 1. Fetch exact business details
-    target_data = fetch_place_details(req.place_id)
+    target_data = fetch_place_details(req.place_id, req.session_token)
     if not target_data:
         raise HTTPException(status_code=404, detail="Could not fetch data for this place.")
         
-    rating = target_data.get("google_rating", 0)
-    reviews = target_data.get("review_count", 0)
+    rating = target_data.get("rating", 0)
+    reviews = target_data.get("userRatingCount", 0)
+    
+    # Extract lat/lng for Nearby Search
+    location = target_data.get("location", {})
+    lat = location.get("latitude")
+    lng = location.get("longitude")
     
     # 2. Fetch competitors
-    competitors_raw = fetch_competitors(req.category, req.city)
+    # Map category to Google Places type and radius
+    cat_lower = req.category.lower()
+    radius = 2000.0
+    included_types = []
     
-    # Filter out the target itself if it appears in competitor list
-    competitors = [c for c in competitors_raw if c.get("name").lower() not in req.name.lower()]
+    if "restaurant" in cat_lower:
+        included_types = ["restaurant"]
+        radius = 1500.0
+    elif "cafe" in cat_lower:
+        included_types = ["cafe", "coffee_shop"]
+        radius = 1500.0
+    elif "salon" in cat_lower or "spa" in cat_lower:
+        included_types = ["beauty_salon", "hair_care", "spa"]
+        radius = 2000.0
+    elif "gym" in cat_lower or "fitness" in cat_lower:
+        included_types = ["gym", "fitness_center"]
+        radius = 3000.0
+    elif "ca firm" in cat_lower or "accountant" in cat_lower:
+        included_types = ["accounting", "finance"]
+        radius = 5000.0
+    elif "real estate" in cat_lower:
+        included_types = ["real_estate_agency"]
+        radius = 5000.0
+    elif "bakery" in cat_lower:
+        included_types = ["bakery"]
+        radius = 3000.0
+    elif "jewellery" in cat_lower:
+        included_types = ["jewelry_store"]
+        radius = 4000.0
+    else:
+        included_types = ["store"]
+        radius = 3000.0
+        
+    competitors_raw = []
+    if lat and lng:
+        competitors_raw = fetch_nearby_competitors(lat, lng, radius, included_types)
     
-    comp_reviews = [c.get("reviews", 0) for c in competitors]
+    # Filter out the target itself if it appears in competitor list by ID
+    competitors = [c for c in competitors_raw if c.get("id") != req.place_id]
+    
+    # Sort competitors by review count and take top 8
+    competitors.sort(key=lambda x: x.get("userRatingCount", 0), reverse=True)
+    competitors = competitors[:8]
+    
+    comp_reviews = [c.get("userRatingCount", 0) for c in competitors]
     avg_comp_reviews = int(sum(comp_reviews) / len(comp_reviews)) if comp_reviews else 0
     top_comp_reviews = max(comp_reviews) if comp_reviews else 0
     
@@ -101,7 +145,14 @@ def run_scan(req: ScanRequest, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(scan_record)
     
-    comp_list = [CompetitorData(name=c["name"], rating=c["rating"], reviews=c["reviews"]) for c in competitors]
+    comp_list = [
+        CompetitorData(
+            name=c.get("displayName", {}).get("text", "Unknown"), 
+            rating=c.get("rating", 0), 
+            reviews=c.get("userRatingCount", 0)
+        ) 
+        for c in competitors
+    ]
     
     return ScanResponse(
         scan_id=scan_record.id,

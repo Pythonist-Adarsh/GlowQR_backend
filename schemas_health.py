@@ -5,6 +5,7 @@ class SearchRequest(BaseModel):
     query: str
     lat: Optional[float] = None
     lng: Optional[float] = None
+    session_token: Optional[str] = None
 
 class PlaceResult(BaseModel):
     place_id: str
@@ -21,6 +22,7 @@ class ScanRequest(BaseModel):
     address: str
     category: str # Extracted from user input or Google places
     city: str # Extracted from address
+    session_token: Optional[str] = None
 
 class CompetitorData(BaseModel):
     name: str
