@@ -471,4 +471,31 @@ def send_renewal_confirmed_alert(owner_email: str, owner_name: str, plan: str, n
     except Exception as e:
         print(f"Error sending renewal confirmed alert: {e}")
 
-
+def send_health_report_email(email: str, scan):
+    business_name = scan.business_name
+    score = scan.headline_score
+    
+    html = f"""
+    <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
+        <h2 style="color: #2563EB;">Your Local SEO Health Report</h2>
+        <p>Hi there,</p>
+        <p>Thank you for scanning <b>{business_name}</b>.</p>
+        <p>Your Local Health Score is: <strong style="font-size: 24px; color: {'#16A34A' if score >= 70 else '#F59E0B' if score >= 40 else '#DC2626'}">{score}/100</strong></p>
+        
+        <p>If you'd like to improve your score and get more customers from Google, you can upgrade to GlowQR Premium!</p>
+        <br/>
+        <a href="{APP_URL}" style="display:inline-block; background:#2563EB; color:#fff; text-decoration:none; padding:12px 24px; border-radius:8px; font-weight: bold;">Get Started with GlowQR</a>
+        <br/><br/>
+        <p>— GlowQR Team</p>
+    </div>
+    """
+    
+    try:
+        resend.Emails.send({
+            "from": "GlowQR <hello@glowqr.com>",
+            "to": [email],
+            "subject": f"Your Local Health Score for {business_name}: {score}/100",
+            "html": html
+        })
+    except Exception as e:
+        print(f"Error sending health report email: {e}")

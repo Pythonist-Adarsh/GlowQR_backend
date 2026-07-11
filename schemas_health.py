@@ -3,6 +3,8 @@ from typing import List, Optional
 
 class SearchRequest(BaseModel):
     query: str
+    category: Optional[str] = None
+    city: Optional[str] = None
     lat: Optional[float] = None
     lng: Optional[float] = None
     session_token: Optional[str] = None
@@ -41,6 +43,7 @@ class ScanResponse(BaseModel):
     competitor_top_reviews: int
     competitors: List[CompetitorData]
     issues: List[str]
+    has_website: bool
 
 class CaptureLeadRequest(BaseModel):
     scan_id: int

@@ -5,12 +5,20 @@ from database import get_db
 from models import HealthCheckScan
 from schemas_health import SearchRequest, PlaceResult, ScanRequest, ScanResponse, CaptureLeadRequest, CompetitorData
 from services.places_service import autocomplete_search, fetch_place_details, fetch_nearby_competitors
+from services.email_service import send_health_report_email
 
 router = APIRouter(prefix="/api/health-check", tags=["Health Checker"])
 
 @router.post("/search", response_model=List[PlaceResult])
 def search_business(req: SearchRequest):
-    results = autocomplete_search(req.query, req.session_token)
+    search_query = req.query
+    
+    if req.category:
+        search_query += f" {req.category}"
+    if req.city:
+        search_query += f" {req.city}"
+        
+    results = autocomplete_search(search_query, req.session_token)
     return results
 
 @router.post("/scan", response_model=ScanResponse)
@@ -154,6 +162,8 @@ def run_scan(req: ScanRequest, db: Session = Depends(get_db)):
         for c in competitors
     ]
     
+    has_website = bool(target_data.get("websiteUri"))
+    
     return ScanResponse(
         scan_id=scan_record.id,
         headline_score=headline_score,
@@ -165,7 +175,8 @@ def run_scan(req: ScanRequest, db: Session = Depends(get_db)):
         competitor_avg_reviews=avg_comp_reviews,
         competitor_top_reviews=top_comp_reviews,
         competitors=comp_list,
-        issues=issues
+        issues=issues,
+        has_website=has_website
     )
 
 @router.post("/capture-lead")
@@ -180,4 +191,10 @@ def capture_lead(req: CaptureLeadRequest, db: Session = Depends(get_db)):
         scan.contact_phone = req.phone
         
     db.commit()
+    
+    if req.email:
+        # Note: PDF generation is a separate follow-up task. 
+        # Sending a clean HTML email as an interim solution.
+        send_health_report_email(req.email, scan)
+        
     return {"status": "success"}
