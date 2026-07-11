@@ -8,7 +8,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from database import SessionLocal
 import models
-from services.serpapi_service import fetch_place_details
+from services.places_service import fetch_place_details
 
 def sync_all_businesses():
     print("Starting daily Google Maps sync...")
@@ -28,12 +28,12 @@ def sync_all_businesses():
             try:
                 data = fetch_place_details(biz.place_id)
                 if not data:
-                    print(f"[WARNING] {biz.name}: SerpAPI returned nothing")
+                    print(f"[WARNING] {biz.name}: Places API returned nothing")
                     failed += 1
                     continue
 
-                current_rating = data["google_rating"]
-                current_count = data["review_count"]
+                current_rating = data.get("rating", 0)
+                current_count = data.get("userRatingCount", 0)
 
                 # Update businesses table
                 biz.google_rating = current_rating
@@ -51,7 +51,8 @@ def sync_all_businesses():
                 print(f"[ERROR] {biz.name}: {e}")
                 failed += 1
 
-            time.sleep(1)  # 1 req/sec SerpAPI rate limit
+            # Removed artificial SerpAPI rate limit, Places API handles concurrency better but keep a tiny pause
+            time.sleep(0.1)
 
         timestamp_str = now_utc.strftime("%Y-%m-%d %H:%M:%S UTC")
         print(f"\nSynced {synced} businesses at {timestamp_str}. Failed: {failed}")
