@@ -1,16 +1,9 @@
-import os
-from sqlalchemy import create_engine, text
-from dotenv import load_dotenv
+from database import SessionLocal
+from models import HealthCheckScan
 
-load_dotenv()
-
-DATABASE_URL = os.getenv("DATABASE_URL")
-if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-
-engine = create_engine(DATABASE_URL)
-
-with engine.connect() as conn:
-    result = conn.execute(text("SELECT id, name, slug, instagram_url FROM businesses;"))
-    for row in result:
-        print(row)
+db = SessionLocal()
+scans = db.query(HealthCheckScan).all()
+print(f"Total scans in DB: {len(scans)}")
+for s in scans:
+    print(f"- {s.id}: {s.business_name} ({s.category})")
+db.close()
