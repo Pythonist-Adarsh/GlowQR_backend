@@ -13,8 +13,8 @@ class PlaceResult(BaseModel):
     address: str
     rating: float
     reviews: int
-    thumbnail: str
-    data_id: str
+    thumbnail: Optional[str] = None
+    data_id: Optional[str] = None
 
 class ScanRequest(BaseModel):
     place_id: str
