@@ -22,7 +22,7 @@ def autocomplete_search(query: str, session_token: str = None):
     
     payload = {
         "input": query,
-        "regionCode": "IN"
+        "includedRegionCodes": ["IN"]
     }
     if session_token:
         payload["sessionToken"] = session_token
