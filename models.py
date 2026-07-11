@@ -376,3 +376,25 @@ class PaymentOrder(Base):
     rejection_reason = Column(String, nullable=True)
 
     business = relationship("Business", backref="payment_orders")
+
+class HealthCheckScan(Base):
+    __tablename__ = "health_check_scans"
+
+    id = Column(Integer, primary_key=True, index=True)
+    business_name = Column(String, index=True)
+    google_place_id = Column(String, index=True)
+    category = Column(String, nullable=True)
+    city = Column(String, nullable=True)
+    
+    headline_score = Column(Integer, nullable=True)
+    gmb_score = Column(Integer, nullable=True)
+    seo_score = Column(Integer, nullable=True)
+    geo_aeo_score = Column(Integer, nullable=True)
+    
+    competitor_avg_reviews = Column(Integer, nullable=True)
+    competitor_top_reviews = Column(Integer, nullable=True)
+    
+    contact_email = Column(String, nullable=True)
+    contact_phone = Column(String, nullable=True)
+    
+    scanned_at = Column(DateTime(timezone=True), server_default=func.now())

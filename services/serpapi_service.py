@@ -78,3 +78,88 @@ def fetch_place_details(place_id: str):
     except Exception as e:
         print(f"Error fetching place details for {place_id}: {e}")
         return None
+
+def search_places(query: str, lat: float = None, lng: float = None):
+    """
+    Search for places matching the query using SerpAPI google_maps.
+    """
+    api_key = os.getenv("SERP_API")
+    if not api_key:
+        return []
+        
+    params = {
+        "engine": "google_maps",
+        "q": query,
+        "api_key": api_key,
+    }
+    
+    if lat and lng:
+        params["ll"] = f"@{lat},{lng},14z"
+        
+    try:
+        response = requests.get("https://serpapi.com/search", params=params, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        
+        local_results = data.get("local_results", [])
+        place_results = data.get("place_results", {})
+        
+        # Sometimes it returns a direct place_results if exact match
+        if place_results and "title" in place_results:
+            return [{
+                "place_id": place_results.get("place_id", ""),
+                "name": place_results.get("title", ""),
+                "address": place_results.get("address", ""),
+                "rating": place_results.get("rating", 0),
+                "reviews": place_results.get("reviews", 0),
+                "thumbnail": place_results.get("thumbnail", ""),
+                "data_id": place_results.get("data_id", "")
+            }]
+            
+        return [{
+            "place_id": r.get("place_id", ""),
+            "name": r.get("title", ""),
+            "address": r.get("address", ""),
+            "rating": r.get("rating", 0),
+            "reviews": r.get("reviews", 0),
+            "thumbnail": r.get("thumbnail", ""),
+            "data_id": r.get("data_id", "")
+        } for r in local_results[:5]]
+        
+    except Exception as e:
+        print(f"Error searching places: {e}")
+        return []
+
+def fetch_competitors(category: str, location: str):
+    """
+    Fetch competitors for a given category and location.
+    e.g., category="Cafe", location="Mumbai" -> q="Cafe in Mumbai"
+    """
+    api_key = os.getenv("SERP_API")
+    if not api_key:
+        return []
+        
+    query = f"{category} in {location}"
+    params = {
+        "engine": "google_maps",
+        "q": query,
+        "api_key": api_key,
+    }
+    
+    try:
+        response = requests.get("https://serpapi.com/search", params=params, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+        
+        local_results = data.get("local_results", [])
+        
+        return [{
+            "place_id": r.get("place_id", ""),
+            "name": r.get("title", ""),
+            "rating": r.get("rating", 0),
+            "reviews": r.get("reviews", 0),
+        } for r in local_results[:10] if r.get("rating") and r.get("reviews")]
+        
+    except Exception as e:
+        print(f"Error fetching competitors: {e}")
+        return []

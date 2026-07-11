@@ -24,6 +24,30 @@ def trigger_sync_now(x_admin_key: str = Header(None)):
     from jobs.daily_sync import sync_all_businesses
     return sync_all_businesses()
 
+@router.get("/prospects", dependencies=[Depends(lambda: None)]) # Temporarily omitting verify_admin to match other dependencies or we can add it. Let's use verify_admin.
+def get_prospects(admin_session: str = Cookie(None), db: Session = Depends(get_db)):
+    if not admin_session:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    try:
+        payload = jwt.decode(admin_session, ADMIN_JWT_SECRET, algorithms=[ALGORITHM])
+        if payload.get("sub") != "admin":
+            raise HTTPException(status_code=401, detail="Unauthorized")
+    except Exception:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+        
+    scans = db.query(models.HealthCheckScan).order_by(models.HealthCheckScan.headline_score.asc()).all()
+    return [{
+        "id": s.id,
+        "business_name": s.business_name,
+        "category": s.category,
+        "city": s.city,
+        "headline_score": s.headline_score,
+        "gmb_score": s.gmb_score,
+        "contact_email": s.contact_email,
+        "contact_phone": s.contact_phone,
+        "scanned_at": s.scanned_at
+    } for s in scans]
+
 import jwt
 from passlib.context import CryptContext
 
