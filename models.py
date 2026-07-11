@@ -77,7 +77,7 @@ class Business(Base):
     
     # Branding
     logo_url = Column(String, nullable=True)
-    primary_color = Column(String, default="#6366F1")
+    primary_color = Column(String, default="#2F5FE0")
     tagline = Column(String, nullable=True)
     welcome_message = Column(String, nullable=True)
     
