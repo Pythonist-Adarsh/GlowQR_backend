@@ -58,7 +58,7 @@ def fetch_place_details(place_id: str, session_token: str = None):
     url = f"https://places.googleapis.com/v1/places/{place_id}"
     headers = {
         "X-Goog-Api-Key": api_key,
-        "X-Goog-FieldMask": "id,displayName,rating,userRatingCount,formattedAddress,types,businessStatus,currentOpeningHours,photos,websiteUri,location"
+        "X-Goog-FieldMask": "id,displayName,rating,userRatingCount,formattedAddress,types,businessStatus,currentOpeningHours,photos,websiteUri,location,reviews,nationalPhoneNumber"
     }
     
     # Session token can be passed as a query param for place details in API (New)

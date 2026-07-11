@@ -44,6 +44,7 @@ class ScanResponse(BaseModel):
     competitors: List[CompetitorData]
     issues: List[str]
     has_website: bool
+    geo_aeo_signals: List[dict] = []
 
 class CaptureLeadRequest(BaseModel):
     scan_id: int

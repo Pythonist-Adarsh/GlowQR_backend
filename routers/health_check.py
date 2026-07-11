@@ -6,6 +6,7 @@ from models import HealthCheckScan
 from schemas_health import SearchRequest, PlaceResult, ScanRequest, ScanResponse, CaptureLeadRequest, CompetitorData
 from services.places_service import autocomplete_search, fetch_place_details, fetch_nearby_competitors
 from services.email_service import send_health_report_email
+from services.geo_aeo_service import analyze_geo_aeo_signals
 
 router = APIRouter(prefix="/api/health-check", tags=["Health Checker"])
 
@@ -66,6 +67,42 @@ def run_scan(req: ScanRequest, db: Session = Depends(get_db)):
     elif "jewellery" in cat_lower:
         included_types = ["jewelry_store"]
         radius = 4000.0
+    elif "boutique" in cat_lower:
+        included_types = ["clothing_store"]
+        radius = 4000.0
+    elif "wellness" in cat_lower or "spa" in cat_lower:
+        included_types = ["spa", "massage_clinic"]
+        radius = 3000.0
+    elif "dental" in cat_lower:
+        included_types = ["dental_clinic", "dentist"]
+        radius = 2000.0
+    elif "medical" in cat_lower:
+        included_types = ["medical_clinic", "doctor"]
+        radius = 2000.0
+    elif "electronics" in cat_lower:
+        included_types = ["electronics_store"]
+        radius = 4000.0
+    elif "furniture" in cat_lower:
+        included_types = ["furniture_store"]
+        radius = 5000.0
+    elif "photography" in cat_lower:
+        included_types = ["photography_studio", "photographer"]
+        radius = 5000.0
+    elif "event planner" in cat_lower:
+        included_types = ["event_planner"]
+        radius = 5000.0
+    elif "hotel" in cat_lower:
+        included_types = ["hotel", "guest_house"]
+        radius = 3000.0
+    elif "coaching" in cat_lower:
+        included_types = ["school", "cram_school"]
+        radius = 4000.0
+    elif "garage" in cat_lower or "automobile" in cat_lower:
+        included_types = ["auto_repair", "car_repair"]
+        radius = 5000.0
+    elif "interior designer" in cat_lower:
+        included_types = ["interior_designer"]
+        radius = 5000.0
     else:
         included_types = ["store"]
         radius = 3000.0
@@ -121,9 +158,6 @@ def run_scan(req: ScanRequest, db: Session = Depends(get_db)):
     geo_aeo_score = 0
     
     # Headline Score (50% GMB, 25% SEO, 25% GEO)
-    # Since SEO and GEO are placeholders right now, we can just use GMB score or a weighted version.
-    headline_score = int((gmb_score * 0.5) + (seo_score * 0.25) + (geo_aeo_score * 0.25))
-    
     # Issues
     issues = []
     if rating < 4.0:
@@ -133,13 +167,38 @@ def run_scan(req: ScanRequest, db: Session = Depends(get_db)):
     elif reviews < top_comp_reviews:
         issues.append(f"Your top competitor has {top_comp_reviews} reviews. They are likely getting the lion's share of local clicks.")
     
-    if seo_score == 0:
-        issues.append("SEO Score optimization missing. Update your schema and tags. (Coming Soon)")
-        
-    # 4. Save to DB
-    scan_record = HealthCheckScan(
+    # 4. GEO/AEO and SEO Analysis
+    website_url = target_data.get("websiteUri", "")
+    phone = target_data.get("nationalPhoneNumber", "")
+    reviews_data = target_data.get("reviews", [])
+    
+    geo_aeo_result = analyze_geo_aeo_signals(
+        website_url=website_url,
         business_name=req.name,
+        phone=phone,
+        reviews=reviews_data,
+        category=req.category
+    )
+    
+    has_website = geo_aeo_result["has_website"]
+    geo_aeo_score = geo_aeo_result["geo_aeo_score"]
+    geo_aeo_signals = geo_aeo_result["sub_signals"]
+    
+    # Placeholder for SEO Score until proper implementation
+    seo_score = 0
+    if has_website:
+        seo_score = 50 # Basic fallback if has website
+        
+    # Calculate Headline Score
+    if has_website:
+        headline_score = int((gmb_score * 0.5) + (seo_score * 0.25) + (geo_aeo_score * 0.25))
+    else:
+        headline_score = gmb_score
+
+    # Save to DB
+    scan_record = HealthCheckScan(
         google_place_id=req.place_id,
+        business_name=req.name,
         category=req.category,
         city=req.city,
         headline_score=headline_score,
@@ -155,14 +214,12 @@ def run_scan(req: ScanRequest, db: Session = Depends(get_db)):
     
     comp_list = [
         CompetitorData(
-            name=c.get("displayName", {}).get("text", "Unknown"), 
+            name=c.get("displayName", {}).get("text", ""),
             rating=c.get("rating", 0), 
             reviews=c.get("userRatingCount", 0)
         ) 
         for c in competitors
     ]
-    
-    has_website = bool(target_data.get("websiteUri"))
     
     return ScanResponse(
         scan_id=scan_record.id,
@@ -176,7 +233,8 @@ def run_scan(req: ScanRequest, db: Session = Depends(get_db)):
         competitor_top_reviews=top_comp_reviews,
         competitors=comp_list,
         issues=issues,
-        has_website=has_website
+        has_website=has_website,
+        geo_aeo_signals=geo_aeo_signals
     )
 
 @router.post("/capture-lead")
