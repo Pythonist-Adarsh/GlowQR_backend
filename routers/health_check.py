@@ -184,6 +184,10 @@ def run_scan(req: ScanRequest, db: Session = Depends(get_db)):
     geo_aeo_score = geo_aeo_result["geo_aeo_score"]
     geo_aeo_signals = geo_aeo_result["sub_signals"]
     
+    for sig in geo_aeo_signals:
+        if not sig.get("passed"):
+            issues.append(f"AI Search Issue: {sig.get('message')}")
+    
     # Placeholder for SEO Score until proper implementation
     seo_score = 0
     if has_website:
