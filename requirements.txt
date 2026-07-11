@@ -22,3 +22,5 @@ qrcode
 PyJWT
 reportlab
 apscheduler
+beautifulsoup4
+lxml
