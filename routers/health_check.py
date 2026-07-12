@@ -43,64 +43,49 @@ def run_scan(req: ScanRequest, db: Session = Depends(get_db)):
     radius = 2000.0
     included_types = []
     
-    if "restaurant" in cat_lower:
+    if cat_lower == "restaurant":
         included_types = ["restaurant"]
         radius = 1500.0
-    elif "food court" in cat_lower:
+    elif cat_lower == "food court":
         included_types = ["food_court"]
         radius = 1500.0
-    elif "cafe" in cat_lower:
+    elif cat_lower == "cafe":
         included_types = ["cafe"]
         radius = 1500.0
-    elif "salon" in cat_lower:
+    elif cat_lower == "salon":
         included_types = ["beauty_salon"]
         radius = 2000.0
-    elif "gym" in cat_lower or "fitness" in cat_lower:
+    elif cat_lower == "gym":
         included_types = ["gym"]
         radius = 3000.0
-    elif "ca firm" in cat_lower or "accountant" in cat_lower:
+    elif cat_lower == "ca firm":
         included_types = ["accounting"]
         radius = 5000.0
-    elif "real estate" in cat_lower:
+    elif cat_lower == "real estate":
         included_types = ["real_estate_agency"]
         radius = 5000.0
-    elif "bakery" in cat_lower:
+    elif cat_lower == "bakery":
         included_types = ["bakery"]
         radius = 3000.0
-    elif "artificial jewellery" in cat_lower:
+    elif cat_lower == "jewellery store":
         included_types = ["jewelry_store"]
         radius = 4000.0
-    elif "jewellery" in cat_lower:
-        included_types = ["jewelry_store"]
-        radius = 4000.0
-    elif "boutique" in cat_lower or "clothing" in cat_lower:
+    elif cat_lower == "boutique":
         included_types = ["clothing_store"]
         radius = 4000.0
-    elif "wellness" in cat_lower or "spa" in cat_lower:
-        included_types = ["spa"]
-        radius = 3000.0
-    elif "dental" in cat_lower:
+    elif cat_lower == "dental clinic":
         included_types = ["dental_clinic"]
         radius = 2000.0
-    elif "medical" in cat_lower or "doctor" in cat_lower:
+    elif cat_lower == "medical clinic":
         included_types = ["medical_clinic"]
         radius = 2000.0
-    elif "electronics" in cat_lower:
-        included_types = ["electronics_store"]
-        radius = 4000.0
-    elif "furniture" in cat_lower:
-        included_types = ["furniture_store"]
-        radius = 5000.0
-    elif "hotel" in cat_lower:
+    elif cat_lower == "hotel":
         included_types = ["hotel"]
         radius = 3000.0
-    elif "guesthouse" in cat_lower or "lodge" in cat_lower:
-        included_types = ["guest_house"]
-        radius = 3000.0
-    elif "coaching" in cat_lower or "tuition" in cat_lower:
+    elif cat_lower == "coaching institute":
         included_types = ["school"]
         radius = 4000.0
-    elif "garage" in cat_lower or "automobile" in cat_lower:
+    elif cat_lower == "automobile service":
         included_types = ["car_repair"]
         radius = 5000.0
     else:
