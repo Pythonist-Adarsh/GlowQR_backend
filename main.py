@@ -27,6 +27,7 @@ from routers.bomb_alerts import router as bomb_alerts_router
 from routers.renewal import router as renewal_router
 from routers.payment import router as payment_router
 from routers.health_check import router as health_check_router
+from routers.contact import router as contact_router
 
 load_dotenv(override=True)
 models.Base.metadata.create_all(bind=engine)
@@ -105,6 +106,7 @@ app.include_router(bomb_alerts_router)
 app.include_router(renewal_router)
 app.include_router(payment_router)
 app.include_router(health_check_router)
+app.include_router(contact_router)
 
 # Google OAuth Setup
 oauth = OAuth()

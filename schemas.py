@@ -220,6 +220,16 @@ class QRCodeResponse(BaseModel):
     qr_image_url: Optional[str] = None
     created_at: datetime
 
+# --- Contact ---
+class ContactMessageCreate(BaseModel):
+    topic: str
+    name: str
+    business_name: Optional[str] = None
+    phone: Optional[str] = None
+    email: str
+    current_plan: str
+    message: str
+
 # --- Upgrades ---
 class UpgradeRequestCreate(BaseModel):
     plan: str

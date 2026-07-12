@@ -398,3 +398,17 @@ class HealthCheckScan(Base):
     contact_phone = Column(String, nullable=True)
     
     scanned_at = Column(DateTime(timezone=True), server_default=func.now())
+
+class ContactMessage(Base):
+    __tablename__ = "contact_messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    topic = Column(String, index=True)
+    name = Column(String)
+    business_name = Column(String, nullable=True)
+    phone = Column(String, nullable=True)
+    email = Column(String)
+    current_plan = Column(String, nullable=True)
+    message = Column(String)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    is_read = Column(Boolean, default=False)
