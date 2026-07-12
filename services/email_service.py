@@ -56,6 +56,41 @@ def send_groq_rate_limit_alert(business_name: str, error_msg: str):
         """
     })
 
+def send_contact_form_alert(message_data: dict):
+    resend.Emails.send({
+        "from": "GlowQR <hello@glowqr.com>",
+        "to": [ADMIN_EMAIL],
+        "subject": f"New Contact Message: {message_data['topic']} from {message_data['name']}",
+        "html": f"""
+        <h2>New Contact Form Submission</h2>
+        <p><b>Topic:</b> {message_data['topic']}</p>
+        <p><b>Name:</b> {message_data['name']}</p>
+        <p><b>Business:</b> {message_data.get('business_name') or 'Not provided'}</p>
+        <p><b>Phone:</b> {message_data.get('phone') or 'Not provided'}</p>
+        <p><b>Email:</b> {message_data['email']}</p>
+        <p><b>Current Plan:</b> {message_data.get('current_plan')}</p>
+        <p><b>Message:</b></p>
+        <blockquote style="border-left:4px solid #ccc;padding-left:16px;color:#555;">
+            {message_data['message']}
+        </blockquote>
+        <br>
+        <a href="mailto:{message_data['email']}" style="background:#2F5FE0;color:white;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold">Reply directly</a>
+        """
+    })
+
+def send_contact_auto_reply(user_email: str, user_name: str):
+    resend.Emails.send({
+        "from": "GlowQR Support <hello@glowqr.com>",
+        "to": [user_email],
+        "subject": "We've received your message - GlowQR",
+        "html": f"""
+        <p>Hi {user_name},</p>
+        <p>Thanks for reaching out to us!</p>
+        <p>We have received your message and our team will get back to you as soon as possible (usually within a few hours).</p>
+        <p>Best regards,<br>The GlowQR Team</p>
+        """
+    })
+
 def send_negative_feedback_alert(business_name: str, owner_email: str, rating: int, feedback_text: str):
     resend.Emails.send({
         "from": "GlowQR <hello@glowqr.com>",
