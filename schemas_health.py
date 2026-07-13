@@ -30,6 +30,7 @@ class CompetitorData(BaseModel):
     name: str
     rating: float
     reviews: int
+    distance_km: Optional[float] = None
 
 class ScanResponse(BaseModel):
     scan_id: int
@@ -42,6 +43,7 @@ class ScanResponse(BaseModel):
     competitor_avg_reviews: int
     competitor_top_reviews: int
     competitors: List[CompetitorData]
+    local_competitors: List[CompetitorData] = []
     issues: List[str]
     has_website: bool
     geo_aeo_signals: List[dict] = []

@@ -85,7 +85,7 @@ def fetch_nearby_competitors(lat: float, lng: float, radius: float, included_typ
     headers = {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": api_key,
-        "X-Goog-FieldMask": "places.id,places.displayName,places.rating,places.userRatingCount,places.formattedAddress"
+        "X-Goog-FieldMask": "places.id,places.displayName,places.rating,places.userRatingCount,places.formattedAddress,places.location"
     }
     
     payload = {

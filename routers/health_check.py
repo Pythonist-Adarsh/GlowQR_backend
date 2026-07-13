@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
+import math
 from database import get_db
 from models import HealthCheckScan
 from schemas_health import SearchRequest, PlaceResult, ScanRequest, ScanResponse, CaptureLeadRequest, CompetitorData
@@ -21,6 +22,14 @@ def search_business(req: SearchRequest):
         
     results = autocomplete_search(search_query, req.session_token)
     return results
+
+def haversine(lat1, lon1, lat2, lon2):
+    R = 6371.0 # Earth radius in kilometers
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = math.sin(dlat / 2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return R * c
 
 @router.post("/scan", response_model=ScanResponse)
 def run_scan(req: ScanRequest, db: Session = Depends(get_db)):
@@ -92,20 +101,69 @@ def run_scan(req: ScanRequest, db: Session = Depends(get_db)):
         included_types = ["store"]
         radius = 3000.0
         
-    competitors_raw = []
+    scoring_competitors_raw = []
+    city_wide_competitors_raw = []
     if lat and lng:
-        competitors_raw = fetch_nearby_competitors(lat, lng, radius, included_types)
+        scoring_competitors_raw = fetch_nearby_competitors(lat, lng, radius, included_types)
+        city_wide_competitors_raw = fetch_nearby_competitors(lat, lng, 15000.0, included_types)
     
     # Filter out the target itself if it appears in competitor list by ID
-    competitors = [c for c in competitors_raw if c.get("id") != req.place_id]
+    scoring_competitors = [c for c in scoring_competitors_raw if c.get("id") != req.place_id]
     
-    # Sort competitors by review count and take top 8
-    competitors.sort(key=lambda x: x.get("userRatingCount", 0), reverse=True)
-    competitors = competitors[:8]
+    # Sort competitors by review count and take top 8 for scoring
+    scoring_competitors.sort(key=lambda x: x.get("userRatingCount", 0), reverse=True)
+    scoring_competitors = scoring_competitors[:8]
     
-    comp_reviews = [c.get("userRatingCount", 0) for c in competitors]
+    comp_reviews = [c.get("userRatingCount", 0) for c in scoring_competitors]
     avg_comp_reviews = int(sum(comp_reviews) / len(comp_reviews)) if comp_reviews else 0
     top_comp_reviews = max(comp_reviews) if comp_reviews else 0
+    
+    # Calculate local radius
+    footfall_cats = ["bakery", "cafe", "restaurant", "salon", "gym", "food court", "boutique"]
+    local_radius_km = 2.5 if any(f in cat_lower for f in footfall_cats) else 6.0
+    
+    # Generate local competitors list
+    local_competitors_list = []
+    for c in scoring_competitors_raw:
+        if c.get("id") == req.place_id:
+            continue
+        c_lat = c.get("location", {}).get("latitude")
+        c_lng = c.get("location", {}).get("longitude")
+        dist = None
+        if lat and lng and c_lat and c_lng:
+            dist = haversine(lat, lng, c_lat, c_lng)
+        
+        if dist is not None and dist <= local_radius_km:
+            local_competitors_list.append({
+                "name": c.get("displayName", {}).get("text", "Unknown"),
+                "rating": c.get("rating", 0),
+                "reviews": c.get("userRatingCount", 0),
+                "distance_km": round(dist, 1)
+            })
+            
+    local_competitors_list.sort(key=lambda x: x["reviews"], reverse=True)
+    local_competitors_list = local_competitors_list[:8]
+    
+    # Generate city-wide competitors list
+    city_competitors_list = []
+    for c in city_wide_competitors_raw:
+        if c.get("id") == req.place_id:
+            continue
+        c_lat = c.get("location", {}).get("latitude")
+        c_lng = c.get("location", {}).get("longitude")
+        dist = None
+        if lat and lng and c_lat and c_lng:
+            dist = haversine(lat, lng, c_lat, c_lng)
+            
+        city_competitors_list.append({
+            "name": c.get("displayName", {}).get("text", "Unknown"),
+            "rating": c.get("rating", 0),
+            "reviews": c.get("userRatingCount", 0),
+            "distance_km": round(dist, 1) if dist is not None else None
+        })
+        
+    city_competitors_list.sort(key=lambda x: x["reviews"], reverse=True)
+    city_competitors_list = city_competitors_list[:8]
     
     # 3. Calculate Scores
     # GMB Score Logic: 
@@ -201,15 +259,6 @@ def run_scan(req: ScanRequest, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(scan_record)
     
-    comp_list = [
-        CompetitorData(
-            name=c.get("displayName", {}).get("text", ""),
-            rating=c.get("rating", 0), 
-            reviews=c.get("userRatingCount", 0)
-        ) 
-        for c in competitors
-    ]
-    
     return ScanResponse(
         scan_id=scan_record.id,
         headline_score=headline_score,
@@ -220,7 +269,8 @@ def run_scan(req: ScanRequest, db: Session = Depends(get_db)):
         business_reviews=reviews,
         competitor_avg_reviews=avg_comp_reviews,
         competitor_top_reviews=top_comp_reviews,
-        competitors=comp_list,
+        competitors=city_competitors_list,
+        local_competitors=local_competitors_list,
         issues=issues,
         has_website=has_website,
         geo_aeo_signals=geo_aeo_signals
