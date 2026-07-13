@@ -14,11 +14,6 @@ router = APIRouter(prefix="/api/health-check", tags=["Health Checker"])
 @router.post("/search", response_model=List[PlaceResult])
 def search_business(req: SearchRequest):
     search_query = req.query
-    
-    if req.category:
-        search_query += f" {req.category}"
-    if req.city:
-        search_query += f" {req.city}"
         
     results = autocomplete_search(search_query, req.session_token)
     return results
