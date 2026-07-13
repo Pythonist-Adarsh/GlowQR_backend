@@ -89,7 +89,7 @@ def fetch_nearby_competitors(lat: float, lng: float, radius: float, included_typ
     }
     
     payload = {
-        "includedTypes": included_types,
+        "includedPrimaryTypes": included_types,
         "maxResultCount": 20,
         "locationRestriction": {
             "circle": {
