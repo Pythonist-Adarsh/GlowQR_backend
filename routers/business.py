@@ -195,8 +195,8 @@ def sync_business_now(db: Session = Depends(get_db), current_user: models.User =
     if not data:
         raise HTTPException(status_code=500, detail="Failed to fetch data from Google Maps")
         
-    business.google_rating = data["google_rating"]
-    business.review_count = data["review_count"]
+    business.google_rating = data.get("rating", 0)
+    business.review_count = data.get("userRatingCount", 0)
     business.last_synced_at = datetime.now(timezone.utc)
     db.commit()
     
