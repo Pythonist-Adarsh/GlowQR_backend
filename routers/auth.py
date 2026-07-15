@@ -143,7 +143,7 @@ def get_me(db: Session = Depends(get_db), current_user: models.User = Depends(ge
             "full_name": current_user.full_name,
             "plan": current_user.plan,
             "trial_ends_at": current_user.trial_ends_at,
-            "current_period_end": sub.current_period_end if sub else None,
+            "current_period_end": current_user.plan_expires_at if current_user.plan_expires_at else (sub.current_period_end if sub else None),
             "subscription_status": sub.status if sub else None,
             "avatar_url": current_user.avatar_url
         },
