@@ -188,7 +188,7 @@ def sync_business_now(db: Session = Depends(get_db), current_user: models.User =
     if not business.place_id:
         raise HTTPException(status_code=400, detail="Google Place ID not configured")
         
-    from services.serpapi_service import fetch_place_details
+    from services.places_service import fetch_place_details
     from datetime import datetime, timezone
     
     data = fetch_place_details(business.place_id)
