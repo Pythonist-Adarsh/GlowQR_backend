@@ -764,28 +764,43 @@ Rules: ONLY JSON, no code blocks, clean item names, keep currency symbols, never
                 collection.append(item_str)
 
         for b64_image in images_b64:
-            response = client.chat.completions.create(
-                model="meta-llama/llama-4-scout-17b-16e-instruct",
-                messages=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "image_url",
-                                "image_url": {
-                                    "url": f"data:image/jpeg;base64,{b64_image}"
-                                }
-                            },
-                            {
-                                "type": "text",
-                                "text": prompt
+            messages_payload = [
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/jpeg;base64,{b64_image}"
                             }
-                        ]
-                    }
-                ],
-                temperature=0.1,
-                max_tokens=2500
-            )
+                        },
+                        {
+                            "type": "text",
+                            "text": prompt
+                        }
+                    ]
+                }
+            ]
+            
+            try:
+                response = client.chat.completions.create(
+                    model="meta-llama/llama-4-maverick-17b-128e-instruct",
+                    messages=messages_payload,
+                    temperature=0.1,
+                    max_tokens=2500
+                )
+            except Exception as e:
+                error_str = str(e).lower()
+                if "404" in error_str or "does not exist" in error_str or "not found" in error_str:
+                    print(f"Maverick failed, falling back to qwen: {e}")
+                    response = client.chat.completions.create(
+                        model="qwen/qwen3.6-27b",
+                        messages=messages_payload,
+                        temperature=0.1,
+                        max_tokens=2500
+                    )
+                else:
+                    raise e
             
             text = response.choices[0].message.content.strip()
             
@@ -857,5 +872,5 @@ Rules: ONLY JSON, no code blocks, clean item names, keep currency symbols, never
             "highlightDishes": "Sample Dish",
             "signatureDish": "Sample Signature",
             "menuCategories": [],
-            "error": str(e)
+            "error": "Menu scan temporarily unavailable, please try again"
         }

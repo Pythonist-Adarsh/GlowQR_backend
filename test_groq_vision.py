@@ -16,25 +16,40 @@ client = Groq(api_key=api_key)
 tiny_png_base64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="
 
 try:
-    response = client.chat.completions.create(
-        model="meta-llama/llama-4-scout-17b-16e-instruct",
-        messages=[
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": "What is in this image?"},
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:image/png;base64,{tiny_png_base64}"
-                        }
+    messages_payload = [
+        {
+            "role": "user",
+            "content": [
+                {"type": "text", "text": "What is in this image?"},
+                {
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:image/png;base64,{tiny_png_base64}"
                     }
-                ]
-            }
-        ],
-        temperature=0.2,
-        max_tokens=50
-    )
+                }
+            ]
+        }
+    ]
+    try:
+        response = client.chat.completions.create(
+            model="meta-llama/llama-4-maverick-17b-128e-instruct",
+            messages=messages_payload,
+            temperature=0.2,
+            max_tokens=50
+        )
+    except Exception as e:
+        error_str = str(e).lower()
+        if "404" in error_str or "does not exist" in error_str or "not found" in error_str:
+            print(f"Maverick failed, falling back to qwen: {e}")
+            response = client.chat.completions.create(
+                model="qwen/qwen3.6-27b",
+                messages=messages_payload,
+                temperature=0.2,
+                max_tokens=50
+            )
+        else:
+            raise e
+            
     print("SUCCESS")
     print(response.choices[0].message.content)
 except Exception as e:
