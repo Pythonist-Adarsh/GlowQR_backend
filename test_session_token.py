@@ -13,7 +13,7 @@ headers = {
 }
 
 payload = {
-    "input": "Danbam korean food Lucknow",
+    "input": "Danbam korean food Mumbai",
     "includedRegionCodes": ["IN"],
     "sessionToken": "test-session-1234"
 }

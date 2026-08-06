@@ -68,6 +68,8 @@ def fetch_place_details(place_id: str, session_token: str = None):
         
     try:
         res = requests.get(url, headers=headers, params=params, timeout=10)
+        if res.status_code != 200:
+            print(f"Places Details Error Full Raw: {res.text}")
         res.raise_for_status()
         return res.json()
     except Exception as e:

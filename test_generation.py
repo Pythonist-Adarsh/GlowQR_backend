@@ -12,7 +12,7 @@ async def main():
             overall_rating=5,
             selected_items=["Bridal Necklace", "Gold Bangles"],
             plan="premium",
-            city="Lucknow",
+            city="Mumbai",
             session_id=session_id
         )
         for idx, r in enumerate(reviews):
@@ -28,7 +28,7 @@ async def main():
             overall_rating=4,
             selected_items=["Silver Ring"],
             plan="basic",
-            city="Lucknow",
+            city="Mumbai",
             session_id=session_id
         )
         for idx, r in enumerate(reviews):

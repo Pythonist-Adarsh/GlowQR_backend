@@ -12,9 +12,9 @@ db = SessionLocal()
 req = ScanRequest(
     place_id="ChIJTZHqA5DjmzkRtV3moLB6qfQ",
     name="Danbro by Mr. Brown",
-    address="Lucknow",
+    address="India",
     category="Bakery",
-    city="Lucknow"
+    city="Mumbai"
 )
 
 try:
