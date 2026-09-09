@@ -11,7 +11,7 @@ router = APIRouter(prefix="/api/upgrade", tags=["Upgrade"])
 
 @router.post("/request")
 def request_upgrade(data: schemas.UpgradeRequestCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
-    amount_paid = 19900 if data.plan == 'basic' else 49900
+    amount_paid = data.amount
     business = db.query(models.Business).filter(models.Business.owner_id == current_user.id).first()
     business_name = business.name if business else "Unknown Business"
     

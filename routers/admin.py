@@ -214,6 +214,8 @@ def approve_upgrade_patch(id: int, db: Session = Depends(get_db), verified: bool
     
     if req.billing_cycle == 'yearly':
         req.expires_at = now + timedelta(days=365)
+    elif req.billing_cycle == 'quarterly':
+        req.expires_at = now + timedelta(days=90)
     else:
         req.expires_at = now + timedelta(days=30)
     

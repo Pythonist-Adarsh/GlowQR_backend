@@ -1,23 +1,16 @@
 import asyncio
 import os
 import sys
-import functools
-print = functools.partial(print, flush=True)
-import sys
 from dotenv import load_dotenv
+
 load_dotenv()
-import sys
-
-# Add backend directory to sys path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
 from services.groq_service import generate_reviews
 
-async def test_category(category_name, business_name, selected_items, iterations=10):
-    print(f"\n--- Testing Category: {category_name} ({iterations} runs) ---")
-    passes = 0
+async def test_category_repeatedly(category_name, business_name, selected_items, num_runs=10):
+    print(f"\n--- Testing Category: {category_name} ({num_runs} runs) ---")
     failures = 0
-    for i in range(iterations):
+    for i in range(num_runs):
         try:
             reviews = await generate_reviews(
                 business_name=business_name,
@@ -29,22 +22,16 @@ async def test_category(category_name, business_name, selected_items, iterations
                 session_id=f'test-session-{i}',
                 return_debug=False
             )
-            # A fallback means we hit max retries, or parsing failed totally
-            # Typically fallback contains "is worth the visit" for english. Let's just check length.
-            if len(reviews) == 5:
-                passes += 1
-            else:
+            if len(reviews) != 5:
+                print(f"Run {i+1}: Failed! Expected 5 reviews, got {len(reviews)}.")
                 failures += 1
-                print(f"Run {i+1}: Generated {len(reviews)} reviews instead of 5")
-                
+            else:
+                print(f"Run {i+1}: Success.")
         except Exception as e:
+            print(f"Run {i+1}: Error testing {category_name}: {e}")
             failures += 1
-            print(f"Run {i+1} Failed: {e}")
-        
-        await asyncio.sleep(2) # Avoid rate limits
             
-    print(f"Category {category_name}: {passes} passed, {failures} failed")
-    return passes, failures
+    return failures
 
 async def main():
     if not os.environ.get("GROQ_API_KEY"):
@@ -57,14 +44,16 @@ async def main():
         ("bridal & festive jewellery", "Shine Jewellers", ["Gold Necklace", "Bridal Set"])
     ]
     
-    total_passes = 0
     total_failures = 0
     for cat, biz, items in categories:
-        p, f = await test_category(cat, biz, items, 10)
-        total_passes += p
-        total_failures += f
+        fails = await test_category_repeatedly(cat, biz, items, num_runs=10)
+        total_failures += fails
         
-    print(f"\nFINAL RESULTS: {total_passes} passed, {total_failures} failed")
+    print(f"\nTotal Failures across 40 runs: {total_failures}")
+    if total_failures == 0:
+        print("All tests passed! 0 failures.")
+    else:
+        print(f"{total_failures} tests failed. Max tokens might still be too low or there is another issue.")
 
 if __name__ == "__main__":
     asyncio.run(main())

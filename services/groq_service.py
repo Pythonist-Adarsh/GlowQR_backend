@@ -549,14 +549,14 @@ Output ONLY a valid JSON array of exactly 3 strings. No explanation, no markdown
             text = ""
             try:
                 response = client.chat.completions.create(
-                    model="openai/gpt-oss-120b",
+                    model="llama-3.1-8b-instant",
                     messages=[
                         {"role": "system", "content": SYSTEM_PROMPT},
                         {"role": "user", "content": user_prompt}
                     ],
                     temperature=0.95,
-                    max_tokens=2500,
-                    reasoning_effort="low"
+                    max_tokens=1000,
+                    timeout=15.0
                 )
                 text = response.choices[0].message.content
                 if text is None:
@@ -697,11 +697,10 @@ Return ONLY JSON array (3-5 insights). Structure:
 
     try:
         response = client.chat.completions.create(
-            model="openai/gpt-oss-120b",
+            model="llama-3.1-8b-instant",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3,
-            max_tokens=2500,
-            reasoning_effort="low"
+            max_tokens=1000
         )
         text = response.choices[0].message.content.strip()
         text = text.replace('```json', '').replace('```', '').strip()
@@ -824,12 +823,11 @@ Rules: ONLY JSON, no code blocks, clean item names, keep currency symbols, never
                 print(f"JSON parsing failed, attempting repair... {e}")
                 repair_prompt = f"The following JSON is malformed. Fix it and return ONLY the valid JSON, nothing else:\n\n{text}"
                 repair_response = client.chat.completions.create(
-                    model="openai/gpt-oss-120b",
+                    model="llama-3.1-8b-instant",
                     messages=[{"role": "user", "content": repair_prompt}],
                     temperature=0.1,
-                    max_tokens=2500,
-                    response_format={"type": "json_object"},
-                    reasoning_effort="low"
+                    max_tokens=1000,
+                    response_format={"type": "json_object"}
                 )
                 repair_text = repair_response.choices[0].message.content.strip()
                 parsed_json = json.loads(repair_text)
