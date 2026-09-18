@@ -131,6 +131,18 @@ CATEGORY_LANGUAGE_MAP = {
         "experience_words": ["agent", "property", "deal", "broker", "site visit", "transparent", "registry", "residential", "commercial", "rental", "response time", "follow-up", "documentation turnaround"],
         "avoid_words": ["food", "meal", "dinner", "dish", "haircut", "treatment", "best in the market", "highly recommended service", "smooth and hassle-free experience", "queue", "waiting in line"],
     },
+    "domestic mart": {
+        "place_word": "mart",
+        "visit_word": "shopped at",
+        "experience_words": ["grocery", "daily essentials", "product variety", "staff helped", "billing speed", "fresh stock", "prices", "stock availability"],
+        "avoid_words": ["food", "meal", "dinner", "dish", "appointment", "treatment", "haircut", "workout", "consultation"],
+    },
+    "doctor clinic": {
+        "place_word": "clinic",
+        "visit_word": "visited",
+        "experience_words": ["doctor", "consultation", "staff behaviour", "waiting time", "cleanliness", "appointment process", "attentiveness"],
+        "avoid_words": ["food", "meal", "dinner", "dish", "haircut", "workout", "diagnosis", "treatment outcome", "cured", "medicine name", "symptom", "recovered"],
+    },
 }
 
 def get_category_context(category: str) -> dict:
@@ -203,6 +215,7 @@ Use correct business context:
 - Salon/Beauty → staff behavior, hygiene, results
 - Retail → product quality, pricing, variety
 - Real Estate → professionalism, property genuineness, transparency, site visit, documentation speed
+- Doctor Clinic → NEVER mention diagnosis, medical condition, symptoms, treatment outcome, "cured"/"healed"/"recovered" claims, or medicine names. ONLY experience-based language: doctor's attentiveness, staff behaviour, waiting time, cleanliness, ease of appointment booking.
 ❌ NEVER use wrong words like "restaurant" for all businesses.
 
 📍 BUSINESS & CITY MENTION RULE
