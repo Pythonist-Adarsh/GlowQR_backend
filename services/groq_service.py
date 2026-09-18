@@ -579,13 +579,14 @@ Output ONLY a valid JSON array of exactly 3 strings. No explanation, no markdown
             text = ""
             try:
                 response = client.chat.completions.create(
-                    model="llama-3.1-8b-instant",
+                    model="openai/gpt-oss-20b",
                     messages=[
                         {"role": "system", "content": SYSTEM_PROMPT},
                         {"role": "user", "content": user_prompt}
                     ],
                     temperature=0.95,
-                    max_tokens=1000,
+                    max_tokens=1500,
+                    reasoning_effort="low",
                     timeout=15.0
                 )
                 text = response.choices[0].message.content
@@ -723,10 +724,11 @@ Return ONLY JSON array (3-5 insights). Structure:
 
     try:
         response = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
+            model="openai/gpt-oss-20b",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3,
-            max_tokens=1000
+            max_tokens=1500,
+            reasoning_effort="low"
         )
         text = response.choices[0].message.content.strip()
         text = text.replace('```json', '').replace('```', '').strip()
@@ -849,10 +851,11 @@ Rules: ONLY JSON, no code blocks, clean item names, keep currency symbols, never
                 print(f"JSON parsing failed, attempting repair... {e}")
                 repair_prompt = f"The following JSON is malformed. Fix it and return ONLY the valid JSON, nothing else:\n\n{text}"
                 repair_response = client.chat.completions.create(
-                    model="llama-3.1-8b-instant",
+                    model="openai/gpt-oss-20b",
                     messages=[{"role": "user", "content": repair_prompt}],
                     temperature=0.1,
-                    max_tokens=1000,
+                    max_tokens=1500,
+                    reasoning_effort="low",
                     response_format={"type": "json_object"}
                 )
                 repair_text = repair_response.choices[0].message.content.strip()

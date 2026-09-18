@@ -48,7 +48,7 @@ async def run_test(model_name):
 async def main():
     await run_test('openai/gpt-oss-120b')
     await run_test('qwen/qwen3.6-27b')
-    await run_test('llama-3.1-8b-instant')
+    await run_test('openai/gpt-oss-20b')
 
 if __name__ == "__main__":
     asyncio.run(main())

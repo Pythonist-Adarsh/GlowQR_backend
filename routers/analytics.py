@@ -519,10 +519,11 @@ Max 3 problems, max 2 strengths. Be specific, use the numbers provided."""
     try:
         client = get_groq_client()
         res = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
+            model="openai/gpt-oss-20b",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3,
-            max_tokens=1000
+            max_tokens=1500,
+            reasoning_effort="low"
         )
         
         text = res.choices[0].message.content.strip()
