@@ -137,11 +137,23 @@ CATEGORY_LANGUAGE_MAP = {
         "experience_words": ["grocery", "daily essentials", "product variety", "staff helped", "billing speed", "fresh stock", "prices", "stock availability"],
         "avoid_words": ["food", "meal", "dinner", "dish", "appointment", "treatment", "haircut", "workout", "consultation"],
     },
+    "grocery/general retail": {
+        "place_word": "store",
+        "visit_word": "shopped at",
+        "experience_words": ["grocery", "daily essentials", "product variety", "staff helped", "billing speed", "fresh stock", "prices", "stock availability", "store layout"],
+        "avoid_words": ["food", "meal", "dinner", "dish", "appointment", "treatment", "haircut", "workout", "consultation"],
+    },
     "doctor clinic": {
         "place_word": "clinic",
         "visit_word": "visited",
         "experience_words": ["doctor", "consultation", "staff behaviour", "waiting time", "cleanliness", "appointment process", "attentiveness"],
         "avoid_words": ["food", "meal", "dinner", "dish", "haircut", "workout", "diagnosis", "treatment outcome", "cured", "medicine name", "symptom", "recovered"],
+    },
+    "dental clinic": {
+        "place_word": "clinic",
+        "visit_word": "visited",
+        "experience_words": ["dentist", "consultation", "staff behaviour", "waiting time", "cleanliness", "appointment process", "attentiveness", "treatment", "pain free"],
+        "avoid_words": ["food", "meal", "dinner", "dish", "haircut", "workout", "diagnosis", "cured", "medicine name", "symptom", "recovered"],
     },
 }
 
@@ -215,7 +227,7 @@ Use correct business context:
 - Salon/Beauty → staff behavior, hygiene, results
 - Retail → product quality, pricing, variety
 - Real Estate → professionalism, property genuineness, transparency, site visit, documentation speed
-- Doctor Clinic → NEVER mention diagnosis, medical condition, symptoms, treatment outcome, "cured"/"healed"/"recovered" claims, or medicine names. ONLY experience-based language: doctor's attentiveness, staff behaviour, waiting time, cleanliness, ease of appointment booking.
+- Doctor/Dental Clinic → NEVER mention diagnosis, medical condition, symptoms, treatment outcome, "cured"/"healed"/"recovered" claims, or medicine names. ONLY experience-based language: doctor's/dentist's attentiveness, staff behaviour, waiting time, cleanliness, ease of appointment booking.
 ❌ NEVER use wrong words like "restaurant" for all businesses.
 
 📍 BUSINESS & CITY MENTION RULE
