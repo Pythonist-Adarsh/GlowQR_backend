@@ -99,7 +99,10 @@ def run_scan(req: ScanRequest, db: Session = Depends(get_db)):
         included_types = ["car_repair"]
         radius = 5000.0
     elif cat_lower in ["grocery/general retail", "domestic mart", "retail", "supermarket", "grocery store"]:
-        included_types = ["grocery_store", "convenience_store"]
+        if cat_lower in ["supermarket", "retail"]:
+            included_types = ["supermarket", "grocery_store", "convenience_store"]
+        else:
+            included_types = ["grocery_store", "convenience_store"]
         radius = 3000.0
     else:
         included_types = ["store"]
@@ -112,7 +115,18 @@ def run_scan(req: ScanRequest, db: Session = Depends(get_db)):
         city_wide_competitors_raw = fetch_nearby_competitors(lat, lng, 15000.0, included_types)
     
     # Filter out the target itself if it appears in competitor list by ID
-    scoring_competitors = [c for c in scoring_competitors_raw if c.get("id") != req.place_id]
+    def is_valid_competitor(c):
+        if c.get("id") == req.place_id:
+            return False
+        # If user is a small local store, filter out giant chains that miscategorize as grocery_store
+        name = c.get("displayName", {}).get("text", "").lower()
+        if cat_lower in ["grocery/general retail", "domestic mart", "grocery store"]:
+            banned_keywords = ["mega mart", "hypermarket", "supermarket", "smart bazaar", "big bazaar", "reliance smart", "d-mart", "dmart"]
+            if any(b in name for b in banned_keywords):
+                return False
+        return True
+
+    scoring_competitors = [c for c in scoring_competitors_raw if is_valid_competitor(c)]
     
     # Sort competitors by review count and take top 8 for scoring
     scoring_competitors.sort(key=lambda x: x.get("userRatingCount", 0), reverse=True)
@@ -129,7 +143,7 @@ def run_scan(req: ScanRequest, db: Session = Depends(get_db)):
     # Generate local competitors list
     local_competitors_list = []
     for c in scoring_competitors_raw:
-        if c.get("id") == req.place_id:
+        if not is_valid_competitor(c):
             continue
         c_lat = c.get("location", {}).get("latitude")
         c_lng = c.get("location", {}).get("longitude")
@@ -151,7 +165,7 @@ def run_scan(req: ScanRequest, db: Session = Depends(get_db)):
     # Generate city-wide competitors list
     city_competitors_list = []
     for c in city_wide_competitors_raw:
-        if c.get("id") == req.place_id:
+        if not is_valid_competitor(c):
             continue
         c_lat = c.get("location", {}).get("latitude")
         c_lng = c.get("location", {}).get("longitude")
