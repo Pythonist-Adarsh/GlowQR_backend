@@ -92,6 +92,9 @@ def run_scan(req: ScanRequest, db: Session = Depends(get_db)):
     elif cat_lower == "automobile service":
         included_types = ["car_repair"]
         radius = 5000.0
+    elif cat_lower in ["grocery/general retail", "domestic mart"]:
+        included_types = ["grocery_store", "supermarket", "convenience_store"]
+        radius = 3000.0
     else:
         included_types = ["store"]
         radius = 3000.0
