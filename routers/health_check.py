@@ -43,56 +43,62 @@ def run_scan(req: ScanRequest, db: Session = Depends(get_db)):
     
     # 2. Fetch competitors
     # Map category to Google Places type and radius
-    cat_lower = req.category.lower()
+    cat_lower = req.category.lower().strip()
     radius = 2000.0
     included_types = []
     
-    if cat_lower == "restaurant":
+    if cat_lower in ["restaurant", "finedining", "fine dining"]:
         included_types = ["restaurant"]
         radius = 1500.0
-    elif cat_lower == "food court":
-        included_types = ["food_court"]
+    elif cat_lower in ["fast food / qsr", "fastfood", "fast food", "food court", "foodcourt", "food truck", "foodtruck"]:
+        included_types = ["fast_food_restaurant", "restaurant", "meal_takeaway"]
         radius = 1500.0
-    elif cat_lower == "cafe":
-        included_types = ["cafe"]
+    elif cat_lower in ["cafe", "cafe / coffee shop"]:
+        included_types = ["cafe", "coffee_shop"]
         radius = 1500.0
-    elif cat_lower == "salon":
-        included_types = ["beauty_salon"]
+    elif cat_lower in ["bar / lounge", "bar", "lounge"]:
+        included_types = ["bar"]
+        radius = 1500.0
+    elif cat_lower in ["cloud kitchen", "cloudkitchen"]:
+        included_types = ["meal_delivery", "meal_takeaway"]
         radius = 2000.0
-    elif cat_lower == "gym":
-        included_types = ["gym"]
+    elif cat_lower in ["salon", "spa", "beauty salon"]:
+        included_types = ["beauty_salon", "hair_care", "spa"]
+        radius = 2000.0
+    elif cat_lower in ["gym", "fitness", "fitness center"]:
+        included_types = ["gym", "fitness_center"]
         radius = 3000.0
-    elif cat_lower == "ca firm":
+    elif cat_lower in ["ca firm", "tax / ca firm", "accounting"]:
         included_types = ["accounting"]
         radius = 5000.0
-    elif cat_lower == "real estate":
+    elif cat_lower in ["real estate", "real_estate", "real estate agency"]:
         included_types = ["real_estate_agency"]
         radius = 5000.0
-    elif cat_lower == "bakery":
+    elif cat_lower in ["bakery", "bakery / dessert shop"]:
         included_types = ["bakery"]
         radius = 3000.0
-    elif cat_lower == "jewellery store":
+    elif cat_lower in ["jewellery", "jewellery store", "bridal & festive jewellery"]:
         included_types = ["jewelry_store"]
         radius = 4000.0
-    elif cat_lower == "boutique":
+    elif cat_lower in ["boutique", "clothing store"]:
         included_types = ["clothing_store"]
         radius = 4000.0
-    elif cat_lower == "dental clinic":
+    elif cat_lower in ["dental clinic"]:
         included_types = ["dental_clinic"]
         radius = 2000.0
-    elif cat_lower == "medical clinic":
-        included_types = ["medical_clinic"]
+    elif cat_lower in ["medical clinic", "medical", "doctor clinic"]:
+        included_types = ["medical_clinic", "doctor", "hospital"]
         radius = 2000.0
-    elif cat_lower == "hotel":
-        included_types = ["hotel"]
+    elif cat_lower in ["hotel", "motel"]:
+        included_types = ["hotel", "lodging"]
         radius = 3000.0
-    elif cat_lower == "coaching institute":
-        included_types = ["school"]
+    elif cat_lower in ["coaching institute", "education", "school"]:
+        included_types = ["school", "university"]
         radius = 4000.0
-    elif cat_lower == "automobile service":
+    elif cat_lower in ["automobile service", "car repair"]:
         included_types = ["car_repair"]
         radius = 5000.0
-    elif cat_lower in ["grocery/general retail", "domestic mart"]:
+    elif cat_lower in ["grocery/general retail", "domestic mart", "retail", "supermarket", "grocery store"]:
         included_types = ["grocery_store", "supermarket", "convenience_store"]
         radius = 3000.0
     else:
