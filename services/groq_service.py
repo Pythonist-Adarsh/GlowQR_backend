@@ -305,6 +305,7 @@ async def generate_reviews(
     return_debug: bool = False,
     **kwargs
 ):
+    selected_items = [item.strip().title() for item in selected_items] if selected_items else []
     
     business_location = city or "their city"
 
