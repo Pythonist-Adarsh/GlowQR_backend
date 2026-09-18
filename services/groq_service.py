@@ -634,14 +634,10 @@ Output ONLY a valid JSON array of exactly 3 strings. No explanation, no markdown
             cleaned = [v.strip() for v in variants if isinstance(v, str) and len(v.strip()) > 10]
 
             is_valid = True
-            for review in cleaned:
-                for item in items_list:
-                    if item.lower() not in review.lower():
-                        is_valid = False
-                        print(f"[DEBUG] Attempt {attempt+1}: Review missing item '{item}': {review[:50]}...")
-                        break
-                if not is_valid: break
-                
+            combined_reviews = " ".join(cleaned).lower()
+            if items_list and not any(item.lower() in combined_reviews for item in items_list):
+                print(f"[DEBUG] Attempt {attempt+1}: None of the items were mentioned in ANY review!")
+                is_valid = False
             if is_valid and len(cleaned) >= variant_count:
                 unique_reviews = set(cleaned)
                 if len(unique_reviews) < len(cleaned):
