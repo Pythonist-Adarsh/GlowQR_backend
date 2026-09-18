@@ -6,6 +6,48 @@ from dotenv import load_dotenv
 import time
 
 LAST_RATE_LIMIT_ALERT_TIME = 0
+LAST_AI_HEALTH_ALERT_TIME = 0
+
+def _log_ai_event(business_name: str, category: str, status: str, reason: str = None):
+    try:
+        from database import SessionLocal
+        from models import AIGenerationEvent
+        from datetime import datetime, timezone, timedelta
+        
+        db = SessionLocal()
+        event = AIGenerationEvent(
+            business_name=business_name,
+            category=category,
+            status=status,
+            reason=reason
+        )
+        db.add(event)
+        db.commit()
+        
+        if status == "fallback":
+            now = datetime.now(timezone.utc)
+            one_hour_ago = now - timedelta(hours=1)
+            total_last_hour = db.query(AIGenerationEvent).filter(AIGenerationEvent.created_at >= one_hour_ago).count()
+            fallbacks_last_hour = db.query(AIGenerationEvent).filter(AIGenerationEvent.created_at >= one_hour_ago, AIGenerationEvent.status == "fallback").count()
+            
+            if total_last_hour >= 5:
+                fallback_rate = fallbacks_last_hour / total_last_hour
+                if fallback_rate > 0.1:
+                    global LAST_AI_HEALTH_ALERT_TIME
+                    import time
+                    current_time = time.time()
+                    if current_time - LAST_AI_HEALTH_ALERT_TIME > 3600:
+                        try:
+                            from backend.services.email_service import send_groq_rate_limit_alert
+                            send_groq_rate_limit_alert("System", f"High AI Fallback Rate Detected: {fallback_rate*100:.1f}% ({fallbacks_last_hour}/{total_last_hour} events in last 1h)")
+                            LAST_AI_HEALTH_ALERT_TIME = current_time
+                        except Exception as e:
+                            print(f"Failed to send fallback rate alert: {e}")
+                            
+        db.close()
+    except Exception as e:
+        print(f"Failed to log AI event: {e}")
+
 
 load_dotenv(override=True)
 client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
@@ -668,10 +710,12 @@ Output ONLY a valid JSON array of exactly 3 strings. No explanation, no markdown
             while len(cleaned) < variant_count:
                 lang = 'hinglish' if len(cleaned) >= 3 else 'english'
                 print("[DEBUG] GROQ_FALLBACK_USED")
+                _log_ai_event(business_name, category, "fallback", "partial_generation_fail")
                 cleaned.append(get_fallback_review(business_name, lang, len(cleaned), selected_items))
                 
             final_reviews = cleaned[:variant_count]
             print(f"[DEBUG] GROQ_SUCCESS ({len(cleaned)} AI variants generated)")
+            _log_ai_event(business_name, category, "success")
             break
             
         except Exception as e:
@@ -689,6 +733,7 @@ Output ONLY a valid JSON array of exactly 3 strings. No explanation, no markdown
                             print(f"Failed to send rate limit alert: {email_e}")
                 
                 print("[DEBUG] GROQ_FALLBACK_USED (Total Groq Failure)")
+                _log_ai_event(business_name, category, "fallback", "api_error" if "groq_err" in locals() or "429" in str(e) else "total_failure")
                 fallbacks = [get_fallback_review(business_name, 'hinglish' if i >= 3 else 'english', i, selected_items) for i in range(variant_count)]
                 final_reviews = fallbacks
 

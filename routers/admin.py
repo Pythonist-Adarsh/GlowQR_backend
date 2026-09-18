@@ -1021,3 +1021,52 @@ def reject_payment_order(order_id: str, data: schemas.PaymentOrderReject, db: Se
     db.commit()
     
     return {"message": "Payment order rejected successfully"}
+
+@router.get("/ai-health")
+def get_ai_health(db: Session = Depends(get_db), verified: bool = Depends(verify_admin)):
+    now = datetime.now(timezone.utc)
+    
+    def get_stats_for_window(hours: int):
+        window_start = now - timedelta(hours=hours)
+        total = db.query(models.AIGenerationEvent).filter(models.AIGenerationEvent.created_at >= window_start).count()
+        fallbacks = db.query(models.AIGenerationEvent).filter(
+            models.AIGenerationEvent.created_at >= window_start,
+            models.AIGenerationEvent.status == 'fallback'
+        ).count()
+        rate = (fallbacks / total) if total > 0 else 0.0
+        return {
+            "total": total,
+            "fallbacks": fallbacks,
+            "successes": total - fallbacks,
+            "fallback_rate": rate
+        }
+
+    stats_1h = get_stats_for_window(1)
+    stats_24h = get_stats_for_window(24)
+    stats_7d = get_stats_for_window(24 * 7)
+    
+    recent_fallbacks = db.query(models.AIGenerationEvent).filter(
+        models.AIGenerationEvent.status == 'fallback'
+    ).order_by(models.AIGenerationEvent.created_at.desc()).limit(20).all()
+    
+    last_success = db.query(models.AIGenerationEvent).filter(
+        models.AIGenerationEvent.status == 'success'
+    ).order_by(models.AIGenerationEvent.created_at.desc()).first()
+    
+    return {
+        "windows": {
+            "1h": stats_1h,
+            "24h": stats_24h,
+            "7d": stats_7d
+        },
+        "last_success_at": last_success.created_at if last_success else None,
+        "recent_fallbacks": [
+            {
+                "id": f.id,
+                "timestamp": f.created_at,
+                "business_name": f.business_name,
+                "category": f.category,
+                "reason": f.reason
+            } for f in recent_fallbacks
+        ]
+    }

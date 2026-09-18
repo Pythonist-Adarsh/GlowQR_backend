@@ -412,3 +412,13 @@ class ContactMessage(Base):
     message = Column(String)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     is_read = Column(Boolean, default=False)
+
+class AIGenerationEvent(Base):
+    __tablename__ = "ai_generation_events"
+
+    id = Column(Integer, primary_key=True, index=True)
+    business_name = Column(String, index=True, nullable=True)
+    category = Column(String, index=True, nullable=True)
+    status = Column(String, index=True) # 'success' or 'fallback'
+    reason = Column(String, nullable=True) # e.g. 'api_error', 'json_parse_fail', 'item_validation_fail'
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
