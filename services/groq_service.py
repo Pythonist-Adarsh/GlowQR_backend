@@ -210,10 +210,10 @@ Each review MUST follow a DIFFERENT structure:
 5. Slightly detailed review (3-4 lines)
 ❌ NEVER repeat the same structure twice.
 
-🗣️ LANGUAGE VARIATION
-- 40% Hinglish (e.g., "kaafi accha tha", "mast experience")
-- 40% simple English
-- 20% mixed casual tone
+🗣️ LANGUAGE VARIATION (CRITICAL)
+- EXACTLY 3 reviews MUST be in English.
+- EXACTLY 2 reviews MUST be in Hinglish (e.g., "kaafi accha tha", "mast experience").
+- If you are asked to generate exactly 3 reviews, write 2 in English and 1 in Hinglish.
 
 🔁 WORD REPETITION CONTROL
 - Same verb cannot repeat across reviews (e.g., visited, tried, ordered, consulted)
@@ -271,20 +271,24 @@ def get_fallback_review(business_name: str, language: str, index: int, selected_
     
     items_str = ", ".join(selected_items) if selected_items else ""
 
+    item1 = selected_items[0] if selected_items and len(selected_items) > 0 else items_str
+    item2 = selected_items[1] if selected_items and len(selected_items) > 1 else items_str
+    item3 = selected_items[2] if selected_items and len(selected_items) > 2 else items_str
+
     fallbacks = {
         'english': [
-            f"Great experience from start to finish. {name} is worth the visit." + (f" I especially liked the {items_str}." if items_str else ""),
-            f"Service was quick and everything was handled professionally. Pretty good overall." + (f" Tried the {items_str} and it was great." if items_str else ""),
-            f"Decent place. Was a bit busy when we went but the smooth service made up for the wait." + (f" The {items_str} really stood out." if items_str else ""),
-            f"Tried a few things and most were solid. Will probably return again." + (f" Loved the {items_str}." if items_str else ""),
-            f"Nice environment. Staff were friendly, helpful, and didn't rush us." + (f" Highly recommend checking out the {items_str}." if items_str else "")
+            f"Great experience from start to finish. {name} is worth the visit." + (f" I especially liked the {item1}." if item1 else ""),
+            f"Service was quick and everything was handled professionally. Pretty good overall." + (f" Tried the {item2} and it was great." if item2 else ""),
+            f"Decent place. Was a bit busy when we went but the smooth service made up for the wait." + (f" The {item3} really stood out." if item3 else ""),
+            f"Tried a few things and most were solid. Will probably return again." + (f" Loved the {item1}." if item1 else ""),
+            f"Nice environment. Staff were friendly, helpful, and didn't rush us." + (f" Highly recommend checking out the {item2}." if item2 else "")
         ],
         'hinglish': [
-            f"{name} ne genuinely surprise kar diya. Service achi thi aur price bhi reasonable." + (f" Inka {items_str} zaroor try karna." if items_str else ""),
-            f"Thoda wait karna pada but experience worth it tha. Overall sab kuch acha raha." + (f" {items_str} kaafi acha tha." if items_str else ""),
-            f"Sab ko yahan aake pasand aaya. Dobara zaroor aana chahenge." + (f" Specially {items_str} ne dil khush kar diya." if items_str else ""),
-            f"Quality mein koi compromise nahi. Ek baar try karna chahiye." + (f" {items_str} was amazing." if items_str else ""),
-            f"Ambiance acha hai, staff helpful tha. Solid experience raha." + (f" Make sure to ask for {items_str}." if items_str else "")
+            f"{name} ne genuinely surprise kar diya. Service achi thi aur price bhi reasonable." + (f" Inka {item1} zaroor try karna." if item1 else ""),
+            f"Thoda wait karna pada but experience worth it tha. Overall sab kuch acha raha." + (f" {item2} kaafi acha tha." if item2 else ""),
+            f"Sab ko yahan aake pasand aaya. Dobara zaroor aana chahenge." + (f" Specially {item3} ne dil khush kar diya." if item3 else ""),
+            f"Quality mein koi compromise nahi. Ek baar try karna chahiye." + (f" {item1} was amazing." if item1 else ""),
+            f"Ambiance acha hai, staff helpful tha. Solid experience raha." + (f" Make sure to ask for {item2}." if item2 else "")
         ]
     }
     options = fallbacks.get(language.lower(), fallbacks['english'])
@@ -477,7 +481,7 @@ Business Details:
 - Category: {category}
 - City: {business_location}
 - Customer's selected items: {services_str}
-- MANDATORY ITEMS RULE: If items are provided above, you MUST naturally mention ALL of them in EVERY SINGLE REVIEW VARIANT. Do NOT just append them as a robotic comma-separated list at the end. Weave them into natural sentences (e.g., 'The [Item 1] was amazing and I really enjoyed the [Item 2]'). Do not skip any item. Do not substitute them.
+- MANDATORY ITEMS RULE: If items are provided above, you MUST mention them naturally across the reviews. Do NOT mention all of them in every review as it sounds robotic. Instead, split them up! For example, mention 1-2 items in Review 1, a different item in Review 2, etc. NEVER use the exact same comma-separated string in multiple reviews. Make it sound completely natural and varied.
 - Session seed (do not output): {session_id}
 - Customer rating: {overall_rating}/5
 - Value perception: {value_perception if value_perception else "not specified"} — if specified, mention naturally in exactly 1 review only
@@ -506,7 +510,7 @@ CHECKLIST before outputting:
 - No banned words used (e.g., "highly recommend" max once total)
 - No banned openings used
 - All 5 reviews use a DIFFERENT structure (Experience-first, Product-first, Emotion-first, Short casual, Slightly detailed)
-- Language variation applied (40% Hinglish, 40% English, 20% mixed)
+- Language variation applied: Exactly 3 English, Exactly 2 Hinglish
 - City name in MAX 1 review
 - Business name in MAX 2 reviews
 - No two reviews start with the same word
@@ -523,7 +527,7 @@ Business Details:
 - Category: {category}
 - City: {business_location}
 - Customer's selected items: {services_str}
-- MANDATORY ITEMS RULE: If items are provided above, you MUST naturally mention ALL of them in EVERY SINGLE REVIEW VARIANT. Do NOT just append them as a robotic comma-separated list at the end. Weave them into natural sentences (e.g., 'The [Item 1] was amazing and I really enjoyed the [Item 2]'). Do not skip any item. Do not substitute them.
+- MANDATORY ITEMS RULE: If items are provided above, you MUST mention them naturally across the reviews. Do NOT mention all of them in every review as it sounds robotic. Instead, split them up! For example, mention 1-2 items in Review 1, a different item in Review 2, etc. NEVER use the exact same comma-separated string in multiple reviews. Make it sound completely natural and varied.
 - Session seed (do not output): {session_id}
 - Customer rating: {overall_rating}/5
 - Value perception: {value_perception if value_perception else "not specified"} — if specified, mention naturally in exactly 1 review only
@@ -551,7 +555,7 @@ CHECKLIST before outputting:
 - No banned words used (e.g., "highly recommend" max once total)
 - No banned openings used
 - All 3 reviews use a DIFFERENT structure
-- Language variation applied (Hinglish, English, mixed)
+- Language variation applied: Exactly 2 English, Exactly 1 Hinglish
 - City name in MAX 1 review
 - Business name in MAX 2 reviews
 - No two reviews start with the same word
@@ -664,7 +668,7 @@ Output ONLY a valid JSON array of exactly 3 strings. No explanation, no markdown
             cleaned = enforced
             
             while len(cleaned) < variant_count:
-                lang = 'hinglish' if (plan == 'premium' and len(cleaned) >= 3) else 'english'
+                lang = 'hinglish' if len(cleaned) >= 3 else 'english'
                 print("[DEBUG] GROQ_FALLBACK_USED")
                 cleaned.append(get_fallback_review(business_name, lang, len(cleaned), selected_items))
                 
@@ -687,7 +691,7 @@ Output ONLY a valid JSON array of exactly 3 strings. No explanation, no markdown
                             print(f"Failed to send rate limit alert: {email_e}")
                 
                 print("[DEBUG] GROQ_FALLBACK_USED (Total Groq Failure)")
-                fallbacks = [get_fallback_review(business_name, 'hinglish' if (plan == 'premium' and i >= 3) else 'english', i, selected_items) for i in range(variant_count)]
+                fallbacks = [get_fallback_review(business_name, 'hinglish' if i >= 3 else 'english', i, selected_items) for i in range(variant_count)]
                 final_reviews = fallbacks
 
     if return_debug:
