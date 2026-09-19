@@ -76,7 +76,7 @@ def fetch_place_details(place_id: str, session_token: str = None):
         print(f"Places Details Error: {e}")
         return None
 
-def fetch_nearby_competitors(lat: float, lng: float, radius: float, included_types: list):
+def fetch_nearby_competitors(lat: float, lng: float, radius: float, included_types: list, excluded_types: list = None):
     """
     Fetch nearby competitors using Nearby Search (New).
     FieldMask uses Pro tier fields only.
@@ -103,6 +103,9 @@ def fetch_nearby_competitors(lat: float, lng: float, radius: float, included_typ
             }
         }
     }
+    if excluded_types:
+        payload["excludedPrimaryTypes"] = excluded_types
+    
     
     try:
         res = requests.post(url, json=payload, headers=headers, timeout=10)
