@@ -438,7 +438,6 @@ def send_renewal_reminder_alert(owner_email: str, owner_name: str, plan: str, ex
         <p>Your GlowQR <b>{plan}</b> plan expires soon (on {expiry_date}).</p>
         <p>Renew now to keep your QR active:</p>
         <p>👉 <b>Login → Dashboard → Renew Plan</b></p>
-        <p>Or pay <b>{amount}</b> via UPI to: <b>{upi_id}</b></p>
         <br/>
         <a href="{APP_URL}/dashboard" style="display:inline-block; background:#111; color:#fff; text-decoration:none; padding:10px 20px; border-radius:8px;">Go to Dashboard</a>
         <br/><br/>
@@ -464,7 +463,6 @@ def send_expired_alert(owner_email: str, owner_name: str, upi_id: str):
         <p>Your QR code is now inactive — customers see a paused message.</p>
         <p>Renew now to reactivate instantly:</p>
         <p>👉 <b>Login → Dashboard → Renew Plan</b></p>
-        <p>UPI ID: <b>{upi_id}</b></p>
         <br/>
         <a href="{APP_URL}/dashboard" style="display:inline-block; background:#111; color:#fff; text-decoration:none; padding:10px 20px; border-radius:8px;">Renew Now</a>
         <br/><br/>

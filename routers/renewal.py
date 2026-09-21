@@ -20,6 +20,7 @@ class CashfreeOrderRequest(BaseModel):
     plan: str
     amount_paid: int
     billing_cycle: str = "monthly"
+    request_type: str = "renewal"
 
 @router.post("/cashfree/create-order")
 def create_cashfree_order(data: CashfreeOrderRequest, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
@@ -36,7 +37,7 @@ def create_cashfree_order(data: CashfreeOrderRequest, db: Session = Depends(get_
         billing_cycle=data.billing_cycle,
         amount_paid=data.amount_paid,
         status="pending",
-        request_type="renewal",
+        request_type=data.request_type,
         payment_method="cashfree"
     )
     db.add(new_request)
