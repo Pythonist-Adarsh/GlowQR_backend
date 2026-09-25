@@ -874,7 +874,7 @@ Rules: ONLY JSON, no code blocks, clean item names, keep currency symbols, never
                 if "404" in error_str or "does not exist" in error_str or "not found" in error_str:
                     print(f"Maverick failed, falling back to qwen: {e}")
                     response = client.chat.completions.create(
-                        model="qwen/qwen3.6-27b",
+                        model="qwen/qwen3.8-27b",
                         messages=messages_payload,
                         temperature=0.1,
                         max_tokens=2500
