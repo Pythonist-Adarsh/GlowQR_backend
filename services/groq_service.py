@@ -813,25 +813,24 @@ async def extract_menu_from_image(file_bytes: bytes, mime_type: str = "image/jpe
         if not images_b64:
             return {"error": "No images found to process", "menuCategories": []}
 
-        prompt = """Extract all menu items and return ONLY this JSON, no markdown:
+        base_prompt = """Extract all menu items and return ONLY this JSON, no markdown:
 {
-  "highlightDishes": "string",
-  "signatureDish": "string",
-  "menuCategories": [
+  "h": "string (highlight dishes)",
+  "s": "string (signature dish)",
+  "c": [
     {
-      "category": "string",
-      "items": [
+      "c": "string (category name)",
+      "i": [
         {
-          "id": 1,
-          "name": "string",
-          "emoji": "🍔",
-          "price": "string or null"
+          "n": "string (item name)",
+          "e": "🍔",
+          "p": "string (price or null)"
         }
       ]
     }
   ]
 }
-Rules: ONLY JSON, no code blocks, clean item names, keep currency symbols, never empty menuCategories."""
+Rules: ONLY JSON, no code blocks, clean item names, keep currency symbols."""
 
         final_categories = []
         final_signature_dishes = []
@@ -844,94 +843,111 @@ Rules: ONLY JSON, no code blocks, clean item names, keep currency symbols, never
                 collection.append(item_str)
 
         for b64_image in images_b64:
-            messages_payload = [
-                {
-                    "role": "user",
-                    "content": [
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": f"data:image/jpeg;base64,{b64_image}"
-                            }
-                        },
-                        {
-                            "type": "text",
-                            "text": prompt
-                        }
-                    ]
-                }
-            ]
+            fully_extracted_cats = []
+            pass_num = 0
+            max_passes = 4
             
-            try:
-                response = client.chat.completions.create(
-                    model="qwen/qwen3.8-27b",
-                    messages=messages_payload,
-                    temperature=0.1,
-                    max_tokens=900,
-                    response_format={"type": "json_object"},
-                    timeout=30.0
-                )
-            except Exception as e:
-                print(f"Vision API failed: {e}")
-                raise e
-            
-            text = response.choices[0].message.content.strip()
-            
-            import re
-            match = re.search(r'\{.*\}', text, re.DOTALL)
-            if match:
-                text = match.group(0)
+            while pass_num < max_passes:
+                pass_num += 1
+                current_prompt = base_prompt
+                if fully_extracted_cats:
+                    current_prompt += f"\n\nCRITICAL: You already completely extracted these categories: {', '.join(fully_extracted_cats)}. DO NOT output them again. Extract ONLY the remaining categories and items from the image."
                 
-            text = text.replace('```json', '').replace('```', '').strip()
-            try:
-                parsed_json = json.loads(text)
-            except json.JSONDecodeError as e:
-                print(f"JSON parsing failed, attempting repair... {e}")
-                repair_prompt = f"The following JSON is malformed. Fix it and return ONLY the valid JSON, nothing else:\n\n{text}"
-                repair_response = client.chat.completions.create(
-                    model="openai/gpt-oss-20b",
-                    messages=[{"role": "user", "content": repair_prompt}],
-                    temperature=0.1,
-                    max_tokens=1500,
-                    reasoning_effort="low",
-                    response_format={"type": "json_object"}
-                )
-                repair_text = repair_response.choices[0].message.content.strip()
-                parsed_json = json.loads(repair_text)
-            
-            sig = parsed_json.get("signatureDish")
-            if sig and isinstance(sig, str) and sig.lower() not in ["sample signature", ""]:
-                for item in sig.split('\n'):
-                    add_unique_str(final_signature_dishes, item)
-            
-            highlights = parsed_json.get("highlightDishes")
-            if highlights and isinstance(highlights, str) and highlights.lower() not in ["sample dish", ""]:
-                for item in highlights.split('\n'):
-                    add_unique_str(final_highlight_dishes, item)
-            
-            cats = parsed_json.get("menuCategories", [])
-            if isinstance(cats, list):
-                for cat in cats:
-                    cat_name = cat.get("category", "")
-                    if not isinstance(cat_name, str): continue
-                    cat_name = cat_name.strip()
-                    if not cat_name: continue
+                messages_payload = [
+                    {
+                        "role": "user",
+                        "content": [
+                            {
+                                "type": "image_url",
+                                "image_url": {
+                                    "url": f"data:image/jpeg;base64,{b64_image}"
+                                }
+                            },
+                            {
+                                "type": "text",
+                                "text": current_prompt
+                            }
+                        ]
+                    }
+                ]
+                
+                try:
+                    response = client.chat.completions.create(
+                        model="qwen/qwen3.8-27b",
+                        messages=messages_payload,
+                        temperature=0.1,
+                        max_tokens=900,
+                        response_format={"type": "json_object"},
+                        timeout=30.0
+                    )
+                except Exception as e:
+                    print(f"Vision API failed on pass {pass_num}: {e}")
+                    break
+                
+                text = response.choices[0].message.content.strip()
+                finish_reason = response.choices[0].finish_reason
+                
+                import re
+                
+                h_match = re.search(r'"h"\s*:\s*"([^"]*)"', text)
+                if h_match: 
+                    for item in h_match.group(1).replace('\\n', '\n').split('\n'):
+                        if item.lower() not in ["string (highlight dishes)", ""]:
+                            add_unique_str(final_highlight_dishes, item)
+                            
+                s_match = re.search(r'"s"\s*:\s*"([^"]*)"', text)
+                if s_match: 
+                    for item in s_match.group(1).replace('\\n', '\n').split('\n'):
+                        if item.lower() not in ["string (signature dish)", ""]:
+                            add_unique_str(final_signature_dishes, item)
+
+                cat_matches = list(re.finditer(r'"c"\s*:\s*"([^"]+)"', text))
+                
+                for i, match in enumerate(cat_matches):
+                    cat_name = match.group(1).strip()
+                    if not cat_name or cat_name == "string (category name)": continue
+                    
+                    start_idx = match.end()
+                    end_idx = cat_matches[i+1].start() if i + 1 < len(cat_matches) else len(text)
+                    cat_content = text[start_idx:end_idx]
+                    
+                    is_fully_extracted = (i < len(cat_matches) - 1) or (finish_reason != "length")
+                    if is_fully_extracted and cat_name not in fully_extracted_cats:
+                        fully_extracted_cats.append(cat_name)
                     
                     existing_cat = next((c for c in final_categories if c["category"].lower() == cat_name.lower()), None)
                     if not existing_cat:
                         existing_cat = {"category": cat_name, "items": []}
                         final_categories.append(existing_cat)
+                    
+                    item_blocks = re.finditer(r'\{([^{}]*)(?:\}|\Z)', cat_content)
+                    for ib_match in item_blocks:
+                        ib_text = ib_match.group(1)
                         
-                    items = cat.get("items", [])
-                    if isinstance(items, list):
-                        for item in items:
-                            item_name = item.get("name", "")
-                            if not isinstance(item_name, str): continue
-                            item_name = item_name.strip()
-                            if not item_name: continue
+                        name_m = re.search(r'"n"\s*:\s*"([^"]+)"', ib_text)
+                        emoji_m = re.search(r'"e"\s*:\s*"([^"]+)"', ib_text)
+                        price_m = re.search(r'"p"\s*:\s*("[^"]*"|null|\d+)', ib_text)
+                        
+                        if name_m:
+                            item_name = name_m.group(1).strip()
+                            if not item_name or item_name == "string (item name)": continue
                             
-                            if not any(i.get("name", "").lower() == item_name.lower() for i in existing_cat["items"]):
-                                existing_cat["items"].append(item)
+                            emoji = emoji_m.group(1) if emoji_m else "🍔"
+                            price_raw = price_m.group(1) if price_m else "null"
+                            if price_raw == 'null' or price_raw == '"string (price or null)"': 
+                                price = None
+                            else: 
+                                price = price_raw.strip('"')
+                                
+                            if not any(existing_i.get("name", "").lower() == item_name.lower() for existing_i in existing_cat["items"]):
+                                existing_cat["items"].append({
+                                    "name": item_name,
+                                    "emoji": emoji,
+                                    "price": price
+                                })
+                
+                if finish_reason != "length":
+                    break
 
         return {
             "highlightDishes": "\n".join(final_highlight_dishes),
