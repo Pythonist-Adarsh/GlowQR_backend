@@ -181,7 +181,19 @@ def run_scan(req: ScanRequest, db: Session = Depends(get_db)):
     max_local_reviews = max([reviews] + [c["reviews"] for c in local_competitors_basic]) if local_competitors_basic else max(reviews, 1)
     max_city_reviews = max([reviews] + [c["reviews"] for c in city_competitors_basic]) if city_competitors_basic else max(reviews, 1)
     
-    def calculate_composite_score(name_text, biz_rating, biz_reviews, dist_km, is_local, max_radius, max_reviews_pool):
+    # Calculate average distance scores for fair baseline
+    def get_distance_score(dist_km, max_radius):
+        if dist_km is None:
+            return 0.0
+        return max(0.0, 100.0 - (dist_km / max_radius) * 100.0)
+
+    local_dist_scores = [get_distance_score(c["dist"], local_radius_km) for c in local_competitors_basic if c["dist"] is not None]
+    avg_local_dist_score = sum(local_dist_scores) / len(local_dist_scores) if local_dist_scores else 50.0
+
+    city_dist_scores = [get_distance_score(c["dist"], 15.0) for c in city_competitors_basic if c["dist"] is not None]
+    avg_city_dist_score = sum(city_dist_scores) / len(city_dist_scores) if city_dist_scores else 50.0
+    
+    def calculate_composite_score(name_text, biz_rating, biz_reviews, dist_km, is_local, max_radius, max_reviews_pool, is_target=False, target_avg_dist_score=0.0):
         relevance_score = 70.0
         name_lower = name_text.lower()
         if cat_lower in name_lower:
@@ -190,10 +202,13 @@ def run_scan(req: ScanRequest, db: Session = Depends(get_db)):
             relevance_score += 15.0
         relevance_score = min(100.0, relevance_score)
         
-        if dist_km is None:
-            distance_score = 0.0
+        if is_target:
+            distance_score = target_avg_dist_score
         else:
-            distance_score = max(0.0, 100.0 - (dist_km / max_radius) * 100.0)
+            if dist_km is None:
+                distance_score = 0.0
+            else:
+                distance_score = max(0.0, 100.0 - (dist_km / max_radius) * 100.0)
             
         quality_score = (biz_rating / 5.0) * 50.0
         safe_max = max(1.0, float(max_reviews_pool))
@@ -207,8 +222,8 @@ def run_scan(req: ScanRequest, db: Session = Depends(get_db)):
             
         return round(relevance_score, 1), round(distance_score, 1), round(prominence_score, 1), round(comp, 1)
 
-    target_r_loc, target_d_loc, target_p_loc, target_c_loc = calculate_composite_score(req.name, rating, reviews, 0.0, True, local_radius_km, max_local_reviews)
-    target_r_city, target_d_city, target_p_city, target_c_city = calculate_composite_score(req.name, rating, reviews, 0.0, False, 15.0, max_city_reviews)
+    target_r_loc, target_d_loc, target_p_loc, target_c_loc = calculate_composite_score(req.name, rating, reviews, 0.0, True, local_radius_km, max_local_reviews, is_target=True, target_avg_dist_score=avg_local_dist_score)
+    target_r_city, target_d_city, target_p_city, target_c_city = calculate_composite_score(req.name, rating, reviews, 0.0, False, 15.0, max_city_reviews, is_target=True, target_avg_dist_score=avg_city_dist_score)
     
     target_local_dict = {
         "name": req.name, "rating": rating, "reviews": reviews, "distance_km": 0.0,
