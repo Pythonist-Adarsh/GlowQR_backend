@@ -141,7 +141,47 @@ def run_scan(req: ScanRequest, db: Session = Depends(get_db)):
     local_radius_km = 2.5 if any(f in cat_lower for f in footfall_cats) else 6.0
     
     # Generate local competitors list
-    def calculate_composite_score(name_text, biz_rating, biz_reviews, dist_km, is_local, max_radius):
+    local_competitors_basic = []
+    city_competitors_basic = []
+    
+    for c in scoring_competitors_raw:
+        if not is_valid_competitor(c):
+            continue
+        c_lat = c.get("location", {}).get("latitude")
+        c_lng = c.get("location", {}).get("longitude")
+        dist = None
+        if lat and lng and c_lat and c_lng:
+            dist = haversine(lat, lng, c_lat, c_lng)
+        
+        if dist is not None and dist <= local_radius_km:
+            local_competitors_basic.append({
+                "name": c.get("displayName", {}).get("text", "Unknown"),
+                "rating": c.get("rating", 0),
+                "reviews": c.get("userRatingCount", 0),
+                "dist": dist
+            })
+            
+    for c in city_wide_competitors_raw:
+        if not is_valid_competitor(c):
+            continue
+        c_lat = c.get("location", {}).get("latitude")
+        c_lng = c.get("location", {}).get("longitude")
+        dist = None
+        if lat and lng and c_lat and c_lng:
+            dist = haversine(lat, lng, c_lat, c_lng)
+            
+        if dist is not None:
+            city_competitors_basic.append({
+                "name": c.get("displayName", {}).get("text", "Unknown"),
+                "rating": c.get("rating", 0),
+                "reviews": c.get("userRatingCount", 0),
+                "dist": dist
+            })
+            
+    max_local_reviews = max([reviews] + [c["reviews"] for c in local_competitors_basic]) if local_competitors_basic else max(reviews, 1)
+    max_city_reviews = max([reviews] + [c["reviews"] for c in city_competitors_basic]) if city_competitors_basic else max(reviews, 1)
+    
+    def calculate_composite_score(name_text, biz_rating, biz_reviews, dist_km, is_local, max_radius, max_reviews_pool):
         relevance_score = 70.0
         name_lower = name_text.lower()
         if cat_lower in name_lower:
@@ -156,7 +196,8 @@ def run_scan(req: ScanRequest, db: Session = Depends(get_db)):
             distance_score = max(0.0, 100.0 - (dist_km / max_radius) * 100.0)
             
         quality_score = (biz_rating / 5.0) * 50.0
-        volume_score = min(50.0, (biz_reviews / 500.0) * 50.0)
+        safe_max = max(1.0, float(max_reviews_pool))
+        volume_score = (biz_reviews / safe_max) * 50.0
         prominence_score = quality_score + volume_score
         
         if is_local:
@@ -166,8 +207,8 @@ def run_scan(req: ScanRequest, db: Session = Depends(get_db)):
             
         return round(relevance_score, 1), round(distance_score, 1), round(prominence_score, 1), round(comp, 1)
 
-    target_r_loc, target_d_loc, target_p_loc, target_c_loc = calculate_composite_score(req.name, rating, reviews, 0.0, True, local_radius_km)
-    target_r_city, target_d_city, target_p_city, target_c_city = calculate_composite_score(req.name, rating, reviews, 0.0, False, 15.0)
+    target_r_loc, target_d_loc, target_p_loc, target_c_loc = calculate_composite_score(req.name, rating, reviews, 0.0, True, local_radius_km, max_local_reviews)
+    target_r_city, target_d_city, target_p_city, target_c_city = calculate_composite_score(req.name, rating, reviews, 0.0, False, 15.0, max_city_reviews)
     
     target_local_dict = {
         "name": req.name, "rating": rating, "reviews": reviews, "distance_km": 0.0,
@@ -181,25 +222,13 @@ def run_scan(req: ScanRequest, db: Session = Depends(get_db)):
     }
     
     local_pool = [target_local_dict]
-    for c in scoring_competitors_raw:
-        if not is_valid_competitor(c):
-            continue
-        c_lat = c.get("location", {}).get("latitude")
-        c_lng = c.get("location", {}).get("longitude")
-        dist = None
-        if lat and lng and c_lat and c_lng:
-            dist = haversine(lat, lng, c_lat, c_lng)
-        
-        if dist is not None and dist <= local_radius_km:
-            c_name = c.get("displayName", {}).get("text", "Unknown")
-            c_rating = c.get("rating", 0)
-            c_reviews = c.get("userRatingCount", 0)
-            r, d, p, comp = calculate_composite_score(c_name, c_rating, c_reviews, dist, True, local_radius_km)
-            local_pool.append({
-                "name": c_name, "rating": c_rating, "reviews": c_reviews, "distance_km": round(dist, 1),
-                "relevance_score": r, "distance_score": d, "prominence_score": p, "composite_score": comp,
-                "is_target": False
-            })
+    for c in local_competitors_basic:
+        r, d, p, comp = calculate_composite_score(c["name"], c["rating"], c["reviews"], c["dist"], True, local_radius_km, max_local_reviews)
+        local_pool.append({
+            "name": c["name"], "rating": c["rating"], "reviews": c["reviews"], "distance_km": round(c["dist"], 1),
+            "relevance_score": r, "distance_score": d, "prominence_score": p, "composite_score": comp,
+            "is_target": False
+        })
             
     local_pool.sort(key=lambda x: x["composite_score"], reverse=True)
     business_local_rank = 1
@@ -211,21 +240,10 @@ def run_scan(req: ScanRequest, db: Session = Depends(get_db)):
     
     # Generate city-wide competitors list
     city_pool = [target_city_dict]
-    for c in city_wide_competitors_raw:
-        if not is_valid_competitor(c):
-            continue
-        c_lat = c.get("location", {}).get("latitude")
-        c_lng = c.get("location", {}).get("longitude")
-        dist = None
-        if lat and lng and c_lat and c_lng:
-            dist = haversine(lat, lng, c_lat, c_lng)
-            
-        c_name = c.get("displayName", {}).get("text", "Unknown")
-        c_rating = c.get("rating", 0)
-        c_reviews = c.get("userRatingCount", 0)
-        r, d, p, comp = calculate_composite_score(c_name, c_rating, c_reviews, dist, False, 15.0)
+    for c in city_competitors_basic:
+        r, d, p, comp = calculate_composite_score(c["name"], c["rating"], c["reviews"], c["dist"], False, 15.0, max_city_reviews)
         city_pool.append({
-            "name": c_name, "rating": c_rating, "reviews": c_reviews, "distance_km": round(dist, 1) if dist is not None else None,
+            "name": c["name"], "rating": c["rating"], "reviews": c["reviews"], "distance_km": round(c["dist"], 1) if c["dist"] is not None else None,
             "relevance_score": r, "distance_score": d, "prominence_score": p, "composite_score": comp,
             "is_target": False
         })
