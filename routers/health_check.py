@@ -141,7 +141,46 @@ def run_scan(req: ScanRequest, db: Session = Depends(get_db)):
     local_radius_km = 2.5 if any(f in cat_lower for f in footfall_cats) else 6.0
     
     # Generate local competitors list
-    local_competitors_list = []
+    def calculate_composite_score(name_text, biz_rating, biz_reviews, dist_km, is_local, max_radius):
+        relevance_score = 70.0
+        name_lower = name_text.lower()
+        if cat_lower in name_lower:
+            relevance_score += 30.0
+        elif any(word in name_lower for word in cat_lower.split() if len(word) > 3):
+            relevance_score += 15.0
+        relevance_score = min(100.0, relevance_score)
+        
+        if dist_km is None:
+            distance_score = 0.0
+        else:
+            distance_score = max(0.0, 100.0 - (dist_km / max_radius) * 100.0)
+            
+        quality_score = (biz_rating / 5.0) * 50.0
+        volume_score = min(50.0, (biz_reviews / 500.0) * 50.0)
+        prominence_score = quality_score + volume_score
+        
+        if is_local:
+            comp = (relevance_score * 0.25) + (distance_score * 0.40) + (prominence_score * 0.35)
+        else:
+            comp = (relevance_score * 0.30) + (distance_score * 0.15) + (prominence_score * 0.55)
+            
+        return round(relevance_score, 1), round(distance_score, 1), round(prominence_score, 1), round(comp, 1)
+
+    target_r_loc, target_d_loc, target_p_loc, target_c_loc = calculate_composite_score(req.name, rating, reviews, 0.0, True, local_radius_km)
+    target_r_city, target_d_city, target_p_city, target_c_city = calculate_composite_score(req.name, rating, reviews, 0.0, False, 15.0)
+    
+    target_local_dict = {
+        "name": req.name, "rating": rating, "reviews": reviews, "distance_km": 0.0,
+        "relevance_score": target_r_loc, "distance_score": target_d_loc, "prominence_score": target_p_loc, "composite_score": target_c_loc,
+        "is_target": True
+    }
+    target_city_dict = {
+        "name": req.name, "rating": rating, "reviews": reviews, "distance_km": 0.0,
+        "relevance_score": target_r_city, "distance_score": target_d_city, "prominence_score": target_p_city, "composite_score": target_c_city,
+        "is_target": True
+    }
+    
+    local_pool = [target_local_dict]
     for c in scoring_competitors_raw:
         if not is_valid_competitor(c):
             continue
@@ -152,18 +191,26 @@ def run_scan(req: ScanRequest, db: Session = Depends(get_db)):
             dist = haversine(lat, lng, c_lat, c_lng)
         
         if dist is not None and dist <= local_radius_km:
-            local_competitors_list.append({
-                "name": c.get("displayName", {}).get("text", "Unknown"),
-                "rating": c.get("rating", 0),
-                "reviews": c.get("userRatingCount", 0),
-                "distance_km": round(dist, 1)
+            c_name = c.get("displayName", {}).get("text", "Unknown")
+            c_rating = c.get("rating", 0)
+            c_reviews = c.get("userRatingCount", 0)
+            r, d, p, comp = calculate_composite_score(c_name, c_rating, c_reviews, dist, True, local_radius_km)
+            local_pool.append({
+                "name": c_name, "rating": c_rating, "reviews": c_reviews, "distance_km": round(dist, 1),
+                "relevance_score": r, "distance_score": d, "prominence_score": p, "composite_score": comp,
+                "is_target": False
             })
             
-    local_competitors_list.sort(key=lambda x: x["reviews"], reverse=True)
-    local_competitors_list = local_competitors_list[:8]
+    local_pool.sort(key=lambda x: x["composite_score"], reverse=True)
+    business_local_rank = 1
+    for i, b in enumerate(local_pool):
+        if b["is_target"]:
+            business_local_rank = i + 1
+            break
+    local_competitors_list = [{k:v for k,v in c.items() if k != "is_target"} for c in local_pool if not c["is_target"]][:8]
     
     # Generate city-wide competitors list
-    city_competitors_list = []
+    city_pool = [target_city_dict]
     for c in city_wide_competitors_raw:
         if not is_valid_competitor(c):
             continue
@@ -173,15 +220,23 @@ def run_scan(req: ScanRequest, db: Session = Depends(get_db)):
         if lat and lng and c_lat and c_lng:
             dist = haversine(lat, lng, c_lat, c_lng)
             
-        city_competitors_list.append({
-            "name": c.get("displayName", {}).get("text", "Unknown"),
-            "rating": c.get("rating", 0),
-            "reviews": c.get("userRatingCount", 0),
-            "distance_km": round(dist, 1) if dist is not None else None
+        c_name = c.get("displayName", {}).get("text", "Unknown")
+        c_rating = c.get("rating", 0)
+        c_reviews = c.get("userRatingCount", 0)
+        r, d, p, comp = calculate_composite_score(c_name, c_rating, c_reviews, dist, False, 15.0)
+        city_pool.append({
+            "name": c_name, "rating": c_rating, "reviews": c_reviews, "distance_km": round(dist, 1) if dist is not None else None,
+            "relevance_score": r, "distance_score": d, "prominence_score": p, "composite_score": comp,
+            "is_target": False
         })
         
-    city_competitors_list.sort(key=lambda x: x["reviews"], reverse=True)
-    city_competitors_list = city_competitors_list[:8]
+    city_pool.sort(key=lambda x: x["composite_score"], reverse=True)
+    business_city_rank = 1
+    for i, b in enumerate(city_pool):
+        if b["is_target"]:
+            business_city_rank = i + 1
+            break
+    city_competitors_list = [{k:v for k,v in c.items() if k != "is_target"} for c in city_pool if not c["is_target"]][:8]
     
     # 3. Calculate Scores
     # GMB Score Logic: 
@@ -287,6 +342,8 @@ def run_scan(req: ScanRequest, db: Session = Depends(get_db)):
         business_reviews=reviews,
         competitor_avg_reviews=avg_comp_reviews,
         competitor_top_reviews=top_comp_reviews,
+        business_local_rank=business_local_rank,
+        business_city_rank=business_city_rank,
         competitors=city_competitors_list,
         local_competitors=local_competitors_list,
         issues=issues,

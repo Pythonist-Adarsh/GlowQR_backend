@@ -31,6 +31,10 @@ class CompetitorData(BaseModel):
     rating: float
     reviews: int
     distance_km: Optional[float] = None
+    relevance_score: Optional[float] = 0.0
+    distance_score: Optional[float] = 0.0
+    prominence_score: Optional[float] = 0.0
+    composite_score: Optional[float] = 0.0
 
 class ScanResponse(BaseModel):
     scan_id: int
@@ -42,6 +46,8 @@ class ScanResponse(BaseModel):
     business_reviews: int
     competitor_avg_reviews: int
     competitor_top_reviews: int
+    business_local_rank: Optional[int] = None
+    business_city_rank: Optional[int] = None
     competitors: List[CompetitorData]
     local_competitors: List[CompetitorData] = []
     issues: List[str]
