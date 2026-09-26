@@ -48,6 +48,8 @@ class ScanResponse(BaseModel):
     competitor_top_reviews: int
     business_local_rank: Optional[int] = None
     business_city_rank: Optional[int] = None
+    business_composite_score_local: Optional[float] = None
+    business_composite_score_city: Optional[float] = None
     competitors: List[CompetitorData]
     local_competitors: List[CompetitorData] = []
     issues: List[str]

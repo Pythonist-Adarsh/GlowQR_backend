@@ -230,7 +230,7 @@ def run_scan(req: ScanRequest, db: Session = Depends(get_db)):
             "is_target": False
         })
             
-    local_pool.sort(key=lambda x: x["composite_score"], reverse=True)
+    local_pool.sort(key=lambda x: float(x.get("composite_score") or 0.0), reverse=True)
     business_local_rank = 1
     for i, b in enumerate(local_pool):
         if b["is_target"]:
@@ -248,7 +248,7 @@ def run_scan(req: ScanRequest, db: Session = Depends(get_db)):
             "is_target": False
         })
         
-    city_pool.sort(key=lambda x: x["composite_score"], reverse=True)
+    city_pool.sort(key=lambda x: float(x.get("composite_score") or 0.0), reverse=True)
     business_city_rank = 1
     for i, b in enumerate(city_pool):
         if b["is_target"]:
@@ -362,6 +362,8 @@ def run_scan(req: ScanRequest, db: Session = Depends(get_db)):
         competitor_top_reviews=top_comp_reviews,
         business_local_rank=business_local_rank,
         business_city_rank=business_city_rank,
+        business_composite_score_local=target_c_loc,
+        business_composite_score_city=target_c_city,
         competitors=city_competitors_list,
         local_competitors=local_competitors_list,
         issues=issues,
