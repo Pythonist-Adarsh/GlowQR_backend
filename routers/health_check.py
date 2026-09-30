@@ -144,7 +144,7 @@ def run_scan(req: ScanRequest, db: Session = Depends(get_db)):
     local_competitors_basic = []
     city_competitors_basic = []
     
-    for c in scoring_competitors_raw:
+    for c in scoring_competitors:
         if not is_valid_competitor(c):
             continue
         c_lat = c.get("location", {}).get("latitude")
@@ -161,7 +161,12 @@ def run_scan(req: ScanRequest, db: Session = Depends(get_db)):
                 "dist": dist
             })
             
-    for c in city_wide_competitors_raw:
+    # Limit city-wide competitors similarly before scoring
+    city_wide_competitors = [c for c in city_wide_competitors_raw if is_valid_competitor(c)]
+    city_wide_competitors.sort(key=lambda x: x.get("userRatingCount", 0), reverse=True)
+    city_wide_competitors = city_wide_competitors[:8]
+    
+    for c in city_wide_competitors:
         if not is_valid_competitor(c):
             continue
         c_lat = c.get("location", {}).get("latitude")

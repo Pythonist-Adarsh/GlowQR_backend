@@ -28,6 +28,7 @@ from routers.renewal import router as renewal_router
 from routers.payment import router as payment_router
 from routers.health_check import router as health_check_router
 from routers.contact import router as contact_router
+from routers.ai_profile import router as ai_profile_router
 
 load_dotenv(override=True)
 models.Base.metadata.create_all(bind=engine)
@@ -39,10 +40,13 @@ scheduler = BackgroundScheduler()
 @app.on_event("startup")
 def start_scheduler():
     scheduler.add_job(sync_all_businesses, 'cron', hour=3, minute=0, timezone='Asia/Kolkata')
-    from cron import run_daily_renewal_jobs
+    from cron import run_daily_renewal_jobs, run_weekly_ai_profile_extraction
+    from jobs.ai_visibility_check import run_monthly_ai_visibility_check
     scheduler.add_job(run_daily_renewal_jobs, 'cron', hour=9, minute=0, timezone='Asia/Kolkata')
+    scheduler.add_job(run_weekly_ai_profile_extraction, 'cron', day_of_week='sun', hour=4, minute=0, timezone='Asia/Kolkata')
+    scheduler.add_job(run_monthly_ai_visibility_check, 'cron', day=1, hour=5, minute=0, timezone='Asia/Kolkata')
     scheduler.start()
-    print("Daily sync scheduler and renewal scheduler started")
+    print("Daily sync scheduler, renewal scheduler, weekly AI extraction, and monthly visibility check started")
 
 @app.on_event("shutdown")
 def stop_scheduler():
@@ -107,6 +111,7 @@ app.include_router(renewal_router)
 app.include_router(payment_router)
 app.include_router(health_check_router)
 app.include_router(contact_router)
+app.include_router(ai_profile_router)
 
 # Google OAuth Setup
 oauth = OAuth()
