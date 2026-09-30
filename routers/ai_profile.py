@@ -52,8 +52,9 @@ async def extract_ai_profile(db: Session = Depends(get_db)):
     
     try:
         response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model="openai/gpt-oss-20b",
             messages=[{"role": "user", "content": prompt}],
+            response_format={"type": "json_object"},
             temperature=0.3,
             max_tokens=1500
         )
