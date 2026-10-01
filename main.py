@@ -29,6 +29,7 @@ from routers.payment import router as payment_router
 from routers.health_check import router as health_check_router
 from routers.contact import router as contact_router
 from routers.ai_profile import router as ai_profile_router
+from routers.ai_visibility import router as ai_visibility_router
 
 load_dotenv(override=True)
 models.Base.metadata.create_all(bind=engine)
@@ -112,6 +113,7 @@ app.include_router(payment_router)
 app.include_router(health_check_router)
 app.include_router(contact_router)
 app.include_router(ai_profile_router)
+app.include_router(ai_visibility_router)
 
 # Google OAuth Setup
 oauth = OAuth()
