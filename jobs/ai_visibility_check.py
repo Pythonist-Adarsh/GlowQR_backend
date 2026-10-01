@@ -42,7 +42,7 @@ def run_monthly_ai_visibility_check():
         for prompt in prompts:
             try:
                 response = httpx.post(
-                    f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_api_key}",
+                    f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_api_key}",
                     json={"contents": [{"parts": [{"text": prompt}]}]},
                     timeout=30.0
                 )

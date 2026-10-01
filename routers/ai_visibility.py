@@ -44,7 +44,7 @@ async def trigger_visibility_check(business_id: str, db: Session = Depends(get_d
     
     try:
         response = httpx.post(
-            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_api_key}",
+            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_api_key}",
             json={"contents": [{"parts": [{"text": prompt}]}]},
             timeout=30.0
         )
