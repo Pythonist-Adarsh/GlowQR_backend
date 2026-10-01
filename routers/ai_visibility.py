@@ -8,7 +8,7 @@ import models
 import models_ai
 import re
 
-router = APIRouter(prefix="/ai-visibility", tags=["AI Visibility"])
+router = APIRouter(prefix="/api/ai-visibility", tags=["AI Visibility"])
 
 @router.get("/{business_id}")
 async def get_latest_visibility(business_id: str, db: Session = Depends(get_db)):
