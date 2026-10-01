@@ -4,3 +4,9 @@ __pycache__/
 .env
 *.db
 scratch/.env
+test_*.py
+check_*.py
+add_*.py
+update_*.py
+*.txt
+scratch/
