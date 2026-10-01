@@ -10,3 +10,7 @@ add_*.py
 update_*.py
 *.txt
 scratch/
+*.full
+*_staged.py
+*.diff
+patch_main.py
