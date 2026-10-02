@@ -24,4 +24,5 @@ class AIVisibilityLog(Base):
     mentioned = Column(Boolean, default=False)
     response_snippet = Column(Text, nullable=True)
     competitor_mentioned = Column(String, nullable=True)
+    query = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
