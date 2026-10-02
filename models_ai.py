@@ -23,6 +23,7 @@ class AIVisibilityLog(Base):
     engine = Column(String) # 'chatgpt', 'gemini', 'claude', 'perplexity'
     mentioned = Column(Boolean, default=False)
     response_snippet = Column(Text, nullable=True)
+    raw_response = Column(Text, nullable=True)
     competitor_mentioned = Column(String, nullable=True)
     query = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
