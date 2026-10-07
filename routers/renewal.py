@@ -27,6 +27,8 @@ def create_cashfree_order(data: CashfreeOrderRequest, db: Session = Depends(get_
     business = db.query(models.Business).filter(models.Business.owner_id == current_user.id).first()
     business_name = business.name if business else "Unknown Business"
     
+    env = os.environ.get("CASHFREE_ENV", "TEST")
+    
     new_request = models.UpgradeRequest(
         user_id=current_user.id,
         business_name=business_name,
@@ -38,7 +40,8 @@ def create_cashfree_order(data: CashfreeOrderRequest, db: Session = Depends(get_
         amount_paid=int(data.amount_paid * 100),
         status="pending",
         request_type=data.request_type,
-        payment_method="cashfree"
+        payment_method="cashfree",
+        is_test=(env == "TEST")
     )
     db.add(new_request)
     db.commit()
@@ -46,7 +49,6 @@ def create_cashfree_order(data: CashfreeOrderRequest, db: Session = Depends(get_
 
     client_id = os.environ.get("CASHFREE_CLIENT_ID", "")
     client_secret = os.environ.get("CASHFREE_CLIENT_SECRET", "")
-    env = os.environ.get("CASHFREE_ENV", "TEST")
     
     base_url = "https://sandbox.cashfree.com/pg" if env == "TEST" else "https://api.cashfree.com/pg"
     

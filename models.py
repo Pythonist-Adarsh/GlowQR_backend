@@ -219,6 +219,7 @@ class UpgradeRequest(Base):
     status = Column(String, default="pending") # pending/verified/rejected
     request_type = Column(String, nullable=True) # e.g. renewal
     admin_note = Column(String, nullable=True)
+    is_test = Column(Boolean, default=False)
     activated_at = Column(DateTime(timezone=True), nullable=True)
     expires_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -237,6 +238,7 @@ class Subscription(Base):
     current_period_end = Column(DateTime(timezone=True))
     cancel_at_period_end = Column(Boolean, default=False)
     amount_paise = Column(Integer)
+    is_test = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
@@ -369,6 +371,7 @@ class PaymentOrder(Base):
     status = Column(String, default="pending") # pending, utr_submitted, verified, rejected
     upi_transaction_note = Column(String, unique=True, index=True)
     utr_reference = Column(String, nullable=True)
+    is_test = Column(Boolean, default=False)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     utr_submitted_at = Column(DateTime(timezone=True), nullable=True)
     verified_at = Column(DateTime(timezone=True), nullable=True)

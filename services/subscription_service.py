@@ -43,7 +43,8 @@ def activate_subscription_from_request(req: models.UpgradeRequest, db: Session):
         status='active',
         current_period_start=now,
         current_period_end=req.expires_at,
-        amount_paise=req.amount_paid
+        amount_paise=req.amount_paid,
+        is_test=getattr(req, 'is_test', False)
     )
     db.add(sub)
     db.commit()

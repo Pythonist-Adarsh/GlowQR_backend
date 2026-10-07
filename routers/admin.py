@@ -322,43 +322,51 @@ def get_revenue_data(db: Session = Depends(get_db), verified: bool = Depends(ver
     
     this_month_old = db.query(func.sum(models.UpgradeRequest.amount_paid)).filter(
         models.UpgradeRequest.status == 'verified',
+        models.UpgradeRequest.is_test != True,
         models.UpgradeRequest.activated_at >= first_of_month
     ).scalar() or 0
     
     last_month_old = db.query(func.sum(models.UpgradeRequest.amount_paid)).filter(
         models.UpgradeRequest.status == 'verified',
+        models.UpgradeRequest.is_test != True,
         models.UpgradeRequest.activated_at >= first_of_last_month,
         models.UpgradeRequest.activated_at < first_of_month
     ).scalar() or 0
     
     all_time_old = db.query(func.sum(models.UpgradeRequest.amount_paid)).filter(
-        models.UpgradeRequest.status == 'verified'
+        models.UpgradeRequest.status == 'verified',
+        models.UpgradeRequest.is_test != True
     ).scalar() or 0
 
     this_month_new = db.query(func.sum(models.PaymentOrder.amount)).filter(
         models.PaymentOrder.status == 'verified',
+        models.PaymentOrder.is_test != True,
         models.PaymentOrder.verified_at >= first_of_month
     ).scalar() or 0
     
     last_month_new = db.query(func.sum(models.PaymentOrder.amount)).filter(
         models.PaymentOrder.status == 'verified',
+        models.PaymentOrder.is_test != True,
         models.PaymentOrder.verified_at >= first_of_last_month,
         models.PaymentOrder.verified_at < first_of_month
     ).scalar() or 0
     
     all_time_new = db.query(func.sum(models.PaymentOrder.amount)).filter(
-        models.PaymentOrder.status == 'verified'
+        models.PaymentOrder.status == 'verified',
+        models.PaymentOrder.is_test != True
     ).scalar() or 0
     
     basic_count = db.query(models.Subscription).filter(
         models.Subscription.plan == 'basic',
         models.Subscription.status == 'active',
+        models.Subscription.is_test != True,
         models.Subscription.current_period_end > now
     ).count()
     
     premium_count = db.query(models.Subscription).filter(
         models.Subscription.plan == 'premium',
         models.Subscription.status == 'active',
+        models.Subscription.is_test != True,
         models.Subscription.current_period_end > now
     ).count()
     
@@ -382,6 +390,7 @@ def get_revenue_data(db: Session = Depends(get_db), verified: bool = Depends(ver
             "plan_requested": t.plan_requested,
             "amount_paid": t.amount_paid,
             "utr_number": t.utr_number,
+            "is_test": getattr(t, 'is_test', False),
             "activated_at": t.activated_at.isoformat() if t.activated_at else None,
             "expires_at": t.expires_at.isoformat() if t.expires_at else None
         })
@@ -393,6 +402,7 @@ def get_revenue_data(db: Session = Depends(get_db), verified: bool = Depends(ver
             "plan_requested": order.plan_name.split()[0].lower() if order.plan_name else "unknown",
             "amount_paid": order.amount * 100,
             "utr_number": order.utr_reference,
+            "is_test": getattr(order, 'is_test', False),
             "activated_at": order.verified_at.isoformat() if order.verified_at else None,
             "expires_at": usr.plan_expires_at.isoformat() if usr.plan_expires_at else None
         })
