@@ -167,3 +167,54 @@ def get_renewal_status(db: Session = Depends(get_db), current_user: models.User 
         "qr_active": qr_active,
         "pending_renewal": pending_renewal
     }
+
+@router.get("/order/{order_id}")
+def get_order_status(order_id: str, db: Session = Depends(get_db)):
+    # order_id looks like GQ-123
+    if not order_id.startswith("GQ-"):
+        raise HTTPException(status_code=400, detail="Invalid order ID format")
+    
+    try:
+        req_id = int(order_id.split("-")[1])
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid order ID format")
+        
+    upgrade_req = db.query(models.UpgradeRequest).filter(models.UpgradeRequest.id == req_id).first()
+    if not upgrade_req:
+        raise HTTPException(status_code=404, detail="Order not found")
+        
+    # If already verified by webhook
+    if upgrade_req.status != "pending":
+        return {"status": upgrade_req.status, "plan": upgrade_req.plan_requested}
+        
+    # If still pending, query cashfree directly to see if user actually paid
+    if upgrade_req.payment_method == "cashfree":
+        client_id = os.environ.get("CASHFREE_CLIENT_ID", "")
+        client_secret = os.environ.get("CASHFREE_CLIENT_SECRET", "")
+        env = os.environ.get("CASHFREE_ENV", "TEST")
+        base_url = "https://sandbox.cashfree.com/pg" if env == "TEST" else "https://api.cashfree.com/pg"
+        
+        headers = {
+            "x-client-id": client_id,
+            "x-client-secret": client_secret,
+            "x-api-version": "2023-08-01"
+        }
+        
+        try:
+            # Note: Fetching order might require a valid order_id matching what we sent
+            response = requests.get(f"{base_url}/orders/{order_id}", headers=headers)
+            if response.status_code == 200:
+                cf_data = response.json()
+                order_status = cf_data.get("order_status")
+                if order_status == "PAID":
+                    # Manually activate if webhook was missed/delayed
+                    from services.subscription_service import activate_subscription_from_request
+                    activate_subscription_from_request(upgrade_req, db)
+                    return {"status": "active", "plan": upgrade_req.plan_requested}
+                else:
+                    # ACTIVE, CANCELLED, etc.
+                    return {"status": "pending", "cashfree_status": order_status}
+        except Exception as e:
+            print(f"Error fetching cashfree status: {e}")
+            
+    return {"status": upgrade_req.status}
