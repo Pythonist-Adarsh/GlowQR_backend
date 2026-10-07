@@ -26,4 +26,6 @@ class AIVisibilityLog(Base):
     raw_response = Column(Text, nullable=True)
     competitor_mentioned = Column(String, nullable=True)
     query = Column(String, nullable=True)
+    sourced_from_us = Column(Boolean, default=False)
+    sources = Column(JSON, default=list)
     created_at = Column(DateTime(timezone=True), server_default=func.now())

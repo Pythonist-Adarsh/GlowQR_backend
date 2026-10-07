@@ -1,36 +1,72 @@
 import os
 import httpx
-from datetime import datetime, timezone
+import asyncio
+from datetime import datetime, timezone, timedelta
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
 import models
 import models_ai
-import re
 import json
-from utils_ai import format_location, extract_competitors
+from utils_ai import format_location
+from services.visibility_engine import check_engine
 
 router = APIRouter(prefix="/api/ai-visibility", tags=["AI Visibility"])
 
 @router.get("/{business_id}")
 async def get_latest_visibility(business_id: str, db: Session = Depends(get_db)):
-    log = db.query(models_ai.AIVisibilityLog).filter(
-        models_ai.AIVisibilityLog.business_id == business_id,
-        models_ai.AIVisibilityLog.engine == "gemini"
+    # Find the most recent run (by month/timestamp identifier)
+    latest_log = db.query(models_ai.AIVisibilityLog).filter(
+        models_ai.AIVisibilityLog.business_id == business_id
     ).order_by(models_ai.AIVisibilityLog.created_at.desc()).first()
     
-    if not log:
+    if not latest_log:
         return {"has_data": False}
         
+    latest_run_id = latest_log.month
+    
+    logs = db.query(models_ai.AIVisibilityLog).filter(
+        models_ai.AIVisibilityLog.business_id == business_id,
+        models_ai.AIVisibilityLog.month == latest_run_id
+    ).all()
+    
+    engines = {}
+    competitors_set = set()
+    
+    for log in logs:
+        if log.engine not in engines:
+            engines[log.engine] = {
+                "engine": log.engine,
+                "last_checked": log.created_at.isoformat(),
+                "queries": [],
+                "mentioned_count": 0,
+                "total_count": 0
+            }
+            
+        engines[log.engine]["queries"].append({
+            "query": log.query,
+            "mentioned": log.mentioned,
+            "sources": log.sources,
+            "sourced_from_us": log.sourced_from_us,
+            "snippet": log.response_snippet
+        })
+        
+        engines[log.engine]["total_count"] += 1
+        if log.mentioned:
+            engines[log.engine]["mentioned_count"] += 1
+            
+        if log.competitor_mentioned and log.competitor_mentioned != "N/A" and log.competitor_mentioned != "No specific brands named":
+            for comp in log.competitor_mentioned.split(", "):
+                if comp.strip():
+                    competitors_set.add(comp.strip())
+                    
+    has_chatgpt_key = bool(os.getenv("OPENAI_API_KEY"))
+                    
     return {
         "has_data": True,
-        "mentioned": log.mentioned,
-        "last_checked": log.created_at.isoformat(),
-        "competitor_mentioned": log.competitor_mentioned,
-        "engine": log.engine,
-        "snippet": log.response_snippet,
-        "query": log.query,
-        "raw_response": log.raw_response
+        "engines": list(engines.values()),
+        "competitors": list(competitors_set) if competitors_set else ["No specific brands named"],
+        "has_chatgpt_key": has_chatgpt_key
     }
 
 @router.post("/{business_id}/check")
@@ -40,60 +76,87 @@ async def trigger_visibility_check(business_id: str, db: Session = Depends(get_d
         raise HTTPException(status_code=404, detail="Business not found")
         
     gemini_api_key = os.getenv("GEMINI_API_KEY")
-    if not gemini_api_key:
-        raise HTTPException(status_code=500, detail="GEMINI_API_KEY not configured")
+    openai_api_key = os.getenv("OPENAI_API_KEY")
+    
+    if not gemini_api_key and not openai_api_key:
+        raise HTTPException(status_code=500, detail="No AI API keys configured")
         
-    current_month = datetime.now(timezone.utc).strftime("%Y-%m-%d-%H%M%S") # Just use timestamp so we can trigger multiple times manually
+    # Rate limit check: once per 6 hours
+    six_hours_ago = datetime.now(timezone.utc) - timedelta(hours=6)
+    recent_log = db.query(models_ai.AIVisibilityLog).filter(
+        models_ai.AIVisibilityLog.business_id == business.id,
+        models_ai.AIVisibilityLog.created_at >= six_hours_ago
+    ).first()
     
+    if recent_log:
+        raise HTTPException(status_code=429, detail="Visibility check was run recently. Please wait 6 hours.")
+        
+    current_run_id = datetime.now(timezone.utc).strftime("%Y-%m-%d-%H%M%S")
     location = format_location(business.area_locality, business.city)
-    prompt = f"best {business.category} in {location}"
+    branded_query = f"best {business.category} in {location}"
     
-    try:
-        response = httpx.post(
-            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_api_key}",
-            json={"contents": [{"parts": [{"text": prompt}]}]},
-            timeout=30.0
+    # Get queries
+    queries = []
+    if getattr(business, "visibility_queries", None):
+        queries = list(business.visibility_queries)
+        
+    if branded_query not in queries:
+        queries.insert(0, branded_query)
+        
+    # Cap to 8 queries
+    queries = queries[:8]
+    
+    # Determine engines to run
+    active_engines = []
+    if gemini_api_key:
+        active_engines.append("gemini")
+    if openai_api_key:
+        active_engines.append("chatgpt")
+        
+    # Build tasks
+    tasks = []
+    task_metadata = []
+    
+    for engine in active_engines:
+        for q in queries:
+            tasks.append(check_engine(engine, q))
+            task_metadata.append({"engine": engine, "query": q})
+            
+    # Run in parallel
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    
+    saved_logs = []
+    for meta, res in zip(task_metadata, results):
+        engine = meta["engine"]
+        q = meta["query"]
+        
+        if isinstance(res, Exception):
+            print(f"Engine {engine} query '{q}' raised exception: {res}")
+            continue
+            
+        if "error" in res:
+            print(f"Engine {engine} query '{q}' returned error: {res['error']}")
+            continue
+            
+        snippet = res.get("raw_text", "")
+        if len(snippet) > 1000:
+            snippet = snippet[:1000] + "..."
+            
+        log = models_ai.AIVisibilityLog(
+            business_id=business.id,
+            month=current_run_id,
+            engine=engine,
+            query=q,
+            mentioned=res.get("mentioned", False),
+            sourced_from_us=res.get("sourced_from_us", False),
+            sources=res.get("sources", []),
+            raw_response=res.get("raw_text", ""),
+            response_snippet=snippet,
+            competitor_mentioned=res.get("competitors_raw", "N/A")
         )
-        if response.status_code == 200:
-            data = response.json()
-            text = data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "")
-            
-            b_name = business.name.lower()
-            mentioned = b_name in text.lower() or "house of adayein" in text.lower() or "house of aadayein" in text.lower()
-            
-            competitor_mentioned = "N/A"
-            if not mentioned and text:
-                comp_list = await extract_competitors(text)
-                if comp_list:
-                    competitor_mentioned = ", ".join(comp_list)
-                else:
-                    competitor_mentioned = "No specific brands named"
-                    
-            log = models_ai.AIVisibilityLog(
-                business_id=business.id,
-                month=current_month,
-                engine="gemini",
-                mentioned=mentioned,
-                response_snippet=text[:1000] if text else "Empty response",
-                raw_response=text,
-                competitor_mentioned=competitor_mentioned,
-                query=prompt
-            )
-            db.add(log)
-            db.commit()
-            db.refresh(log)
-            
-            return {
-                "success": True,
-                "mentioned": log.mentioned,
-                "last_checked": log.created_at.isoformat(),
-                "competitor_mentioned": log.competitor_mentioned,
-                "engine": log.engine,
-                "snippet": log.response_snippet,
-                "query": log.query,
-                "raw_response": log.raw_response
-            }
-        else:
-            raise HTTPException(status_code=500, detail=f"Gemini API returned {response.status_code}")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        db.add(log)
+        saved_logs.append(log)
+        
+    db.commit()
+    
+    return {"success": True, "logs_saved": len(saved_logs)}

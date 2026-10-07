@@ -98,6 +98,7 @@ class Business(Base):
     review_language = Column(String, default="english")
     ai_variant_count = Column(Integer, default=3)
     negative_filter_enabled = Column(Boolean, default=False)
+    visibility_queries = Column(JSON, default=list)
     
     # Onboarding State
     onboarding_step = Column(Integer, default=0)
