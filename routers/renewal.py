@@ -187,7 +187,8 @@ def get_order_status(order_id: str, db: Session = Depends(get_db)):
         
     # If already verified by webhook
     if upgrade_req.status != "pending":
-        return {"status": upgrade_req.status, "plan": upgrade_req.plan_requested}
+        amount_rs = int(upgrade_req.amount_paid // 100) if upgrade_req.amount_paid else 399
+        return {"status": upgrade_req.status, "plan": upgrade_req.plan_requested, "amount": amount_rs}
         
     # If still pending, query cashfree directly to see if user actually paid
     if upgrade_req.payment_method == "cashfree":
@@ -212,7 +213,9 @@ def get_order_status(order_id: str, db: Session = Depends(get_db)):
                     # Manually activate if webhook was missed/delayed
                     from services.subscription_service import activate_subscription_from_request
                     activate_subscription_from_request(upgrade_req, db)
-                    return {"status": "active", "plan": upgrade_req.plan_requested}
+                    amount_rs = int(upgrade_req.amount_paid // 100) if upgrade_req.amount_paid else 399
+                    return {"status": "active", "plan": upgrade_req.plan_requested, "amount": amount_rs}
+
                 else:
                     # ACTIVE, CANCELLED, etc.
                     return {"status": "pending", "cashfree_status": order_status}

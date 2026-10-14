@@ -181,8 +181,9 @@ async def google_callback(request: Request, db: Session = Depends(get_db)):
 
         access_token = security.create_access_token(data={"sub": user.email})
         
-        frontend_url = os.getenv("FRONTEND_URL", "https://glowqr.com")
+        frontend_url = os.getenv("FRONTEND_URL", "https://www.glowqr.com")
         return RedirectResponse(url=f"{frontend_url}/auth/google/callback?token={access_token}&onboarding_completed={str(has_business).lower()}")
+
         
     except Exception as e:
         import traceback

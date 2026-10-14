@@ -61,6 +61,27 @@ async def get_latest_visibility(business_id: str, db: Session = Depends(get_db))
                     competitors_set.add(comp.strip())
                     
     has_chatgpt_key = bool(os.getenv("OPENAI_API_KEY"))
+    has_gemini_key = bool(os.getenv("GEMINI_API_KEY"))
+    
+    # Fill in disabled statuses
+    if not has_chatgpt_key:
+        engines["chatgpt"] = {
+            "engine": "chatgpt",
+            "status": "disabled",
+            "reason": "OPENAI_API_KEY is not configured",
+            "queries": [],
+            "mentioned_count": 0,
+            "total_count": 0
+        }
+    if not has_gemini_key:
+        engines["gemini"] = {
+            "engine": "gemini",
+            "status": "disabled",
+            "reason": "GEMINI_API_KEY is not configured",
+            "queries": [],
+            "mentioned_count": 0,
+            "total_count": 0
+        }
                     
     return {
         "has_data": True,
@@ -118,22 +139,60 @@ async def trigger_visibility_check(business_id: str, db: Session = Depends(get_d
     
     # Get queries
     queries = []
-    if getattr(business, "visibility_queries", None):
+    if getattr(business, "visibility_queries", None) and len(business.visibility_queries) > 0:
         queries = list(business.visibility_queries)
-        
-    if branded_query not in queries:
-        queries.insert(0, branded_query)
+        if branded_query not in queries:
+            queries.insert(0, branded_query)
+    else:
+        # Fallback to default queries
+        if business.slug == "house-of-aadayein-a4d823":
+            queries = [
+                "House of Aadayein Lucknow",
+                "artificial jewellery shop in Gomti Nagar, Lucknow",
+                "bridal jewellery set shop in Lucknow",
+                "custom jewellery in Lucknow",
+                "hand bag shop in Gomti Nagar, Lucknow",
+                "necklace and earrings collection Gomti Nagar Lucknow"
+            ]
+        else:
+            queries = [
+                branded_query,
+                f"top rated {business.category} near {business.area_locality}",
+                f"where to go for {business.category} in {business.city}",
+                f"best rental outfits in {business.city}",
+                f"bridal wear in {business.city}"
+            ]
         
     queries = queries[:8]
+    print(f"[AI Visibility] queries: {len(queries)}")
     
     active_engines = []
     if gemini_api_key: active_engines.append("gemini")
     if openai_api_key: active_engines.append("chatgpt")
     
     start_time = time.time()
-    print(f"[AI Visibility] Starting check for slug: {business.slug}, engines: {active_engines}, queries: {len(queries)}")
+    has_openai = bool(openai_api_key)
+    print(f"[AI Visibility] Starting check for slug: {business.slug}, engines enabled: {active_engines}, OPENAI key present: {has_openai}, queries: {len(queries)}")
     
     engine_responses = []
+    
+    # Handle disabled ChatGPT explicitly
+    if not openai_api_key:
+        engine_responses.append({
+            "engine": "chatgpt",
+            "status": "disabled",
+            "reason": "OPENAI_API_KEY is not configured on the server",
+            "results_saved": 0
+        })
+        
+    # Handle disabled Gemini explicitly
+    if not gemini_api_key:
+        engine_responses.append({
+            "engine": "gemini",
+            "status": "disabled",
+            "reason": "GEMINI_API_KEY is not configured on the server",
+            "results_saved": 0
+        })
     
     for engine in active_engines:
         engine_start = time.time()
