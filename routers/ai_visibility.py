@@ -8,7 +8,7 @@ from database import get_db
 import models
 import models_ai
 import json
-from utils_ai import format_location
+from utils_ai import format_location, merge_competitor_counts
 from services.visibility_engine import check_engine
 
 router = APIRouter(prefix="/api/ai-visibility", tags=["AI Visibility"])
@@ -31,8 +31,7 @@ async def get_latest_visibility(business_id: str, db: Session = Depends(get_db))
     ).all()
     
     engines = {}
-    competitors_set = set()
-    
+
     for log in logs:
         if log.engine not in engines:
             engines[log.engine] = {
@@ -40,53 +39,69 @@ async def get_latest_visibility(business_id: str, db: Session = Depends(get_db))
                 "last_checked": log.created_at.isoformat(),
                 "queries": [],
                 "mentioned_count": 0,
-                "total_count": 0
+                "total_count": 0,
+                "all_sources": []  # flat list of all sources for this engine
             }
-            
+
+        # Collect sources (could be JSON list stored as string or actual list)
+        raw_sources = log.sources or []
+        if isinstance(raw_sources, str):
+            try:
+                raw_sources = json.loads(raw_sources)
+            except Exception:
+                raw_sources = []
+
         engines[log.engine]["queries"].append({
             "query": log.query,
             "mentioned": log.mentioned,
-            "sources": log.sources,
+            "sources": raw_sources,
             "sourced_from_us": log.sourced_from_us,
             "snippet": log.response_snippet
         })
-        
+
+        # Accumulate sources for engine-level list
+        for s in raw_sources:
+            if s and s not in engines[log.engine]["all_sources"]:
+                engines[log.engine]["all_sources"].append(s)
+
         engines[log.engine]["total_count"] += 1
         if log.mentioned:
             engines[log.engine]["mentioned_count"] += 1
-            
-        if log.competitor_mentioned and log.competitor_mentioned != "N/A" and log.competitor_mentioned != "No specific brands named":
-            for comp in log.competitor_mentioned.split(", "):
-                if comp.strip():
-                    competitors_set.add(comp.strip())
-                    
+
+    # Merge competitors across ALL queries and BOTH engines with counts
+    competitor_counts = merge_competitor_counts(logs)
+    # Top 5
+    top_competitors = competitor_counts[:5]
+
     has_chatgpt_key = bool(os.getenv("OPENAI_API_KEY"))
     has_gemini_key = bool(os.getenv("GEMINI_API_KEY"))
-    
+
     # Fill in disabled statuses
-    if not has_chatgpt_key:
+    if not has_chatgpt_key and "chatgpt" not in engines:
         engines["chatgpt"] = {
             "engine": "chatgpt",
             "status": "disabled",
             "reason": "OPENAI_API_KEY is not configured",
             "queries": [],
             "mentioned_count": 0,
-            "total_count": 0
+            "total_count": 0,
+            "all_sources": []
         }
-    if not has_gemini_key:
+    if not has_gemini_key and "gemini" not in engines:
         engines["gemini"] = {
             "engine": "gemini",
             "status": "disabled",
             "reason": "GEMINI_API_KEY is not configured",
             "queries": [],
             "mentioned_count": 0,
-            "total_count": 0
+            "total_count": 0,
+            "all_sources": []
         }
-                    
+
     return {
         "has_data": True,
         "engines": list(engines.values()),
-        "competitors": list(competitors_set) if competitors_set else ["No specific brands named"],
+        "competitors": top_competitors if top_competitors else [{"name": "No specific brands named", "count": 0, "total_answers": 0}],
         "has_chatgpt_key": has_chatgpt_key
     }
 
