@@ -685,7 +685,7 @@ Output ONLY a valid JSON array of exactly 3 strings. No explanation, no markdown
                             {"role": "user", "content": user_prompt}
                         ],
                         temperature=0.95,
-                        max_tokens=400
+                        max_tokens=1200
                     )
                     text = response.choices[0].message.content.strip()
                 else:
