@@ -252,10 +252,22 @@ Each review MUST follow a DIFFERENT structure:
 5. Slightly detailed review (3-4 lines)
 ❌ NEVER repeat the same structure twice.
 
-🗣️ LANGUAGE VARIATION (CRITICAL)
-- EXACTLY 3 reviews MUST be in English.
-- EXACTLY 2 reviews MUST be in Hinglish (e.g., "kaafi accha tha", "mast experience").
-- If you are asked to generate exactly 3 reviews, write 2 in English and 1 in Hinglish.
+🗣️ LANGUAGE SLOT ASSIGNMENT — HARD RULE (OVERRIDES EVERYTHING)
+When generating 5 reviews, the language of EACH SLOT is fixed as follows:
+  Slot 1 → ENGLISH only
+  Slot 2 → HINGLISH only (Roman-script, e.g. "kaafi accha tha", "mast experience")
+  Slot 3 → ENGLISH only
+  Slot 4 → HINGLISH only (Roman-script)
+  Slot 5 → ENGLISH only
+When generating 3 reviews:
+  Slot 1 → ENGLISH only
+  Slot 2 → HINGLISH only (Roman-script)
+  Slot 3 → ENGLISH only
+
+LANGUAGE PURITY — ZERO TOLERANCE:
+- An ENGLISH slot must contain ZERO Hindi/Urdu words. Not one. Not even "acha", "tha", "hai", "mast", "kaafi", "zaroor", "bahut", "dil", "ke". If even one non-English word appears in an English slot, that variant is INVALID.
+- A HINGLISH slot must be a consistent Roman-script Hindi-English mix throughout. Do not write the whole sentence in English with just one Hindi word tacked on — that is also INVALID.
+- BOTH styles must each be at least 20 words and at most 60 words.
 
 🔁 WORD REPETITION CONTROL
 - Same verb cannot repeat across reviews (e.g., visited, tried, ordered, consulted)
@@ -277,11 +289,10 @@ Use correct business context:
 - City name → MAX 1 review only
 - NEVER use both together in the same sentence repeatedly
 
-⏱️ LENGTH VARIATION
-- 1 review → 8-12 words
-- 1 review → 12-18 words
-- 2 reviews → 18-30 words
-- 1 review → 30-45 words
+⏱️ WORD COUNT — NON-NEGOTIABLE
+- EVERY variant (English and Hinglish alike) must be 20–60 words.
+- Count your words before outputting. A variant with fewer than 20 words is INVALID and must be rewritten.
+- Do NOT pad with filler — keep it natural but substantive.
 
 👤 HUMAN BEHAVIOR SIMULATION
 Include natural human imperfections:
@@ -348,8 +359,12 @@ async def generate_reviews(
     **kwargs
 ):
     selected_items = [item.strip().title() for item in selected_items] if selected_items else []
-    
-    business_location = city or "their city"
+    _bad_city = ("your city", "their city", "{", "}", "[", "<")
+    business_location = (city or "").strip()
+    if any(t in business_location.lower() for t in _bad_city):
+        business_location = ""
+    city_line = (f"- City: {business_location}" if business_location
+                 else "- City: NOT PROVIDED - do not mention any city, town or area name in any review")
 
     import random
     import time
@@ -374,14 +389,23 @@ async def generate_reviews(
         "date night", "family outing", "friend's get-together",
         "office party", "cousin's visit", "college reunion", "casual hangout"
     ]
-    _minor_issues = [
+    _minor_issues_food = [
         "parking was a bit of a hassle",
         "the wait was slightly long",
         "it was quite crowded when we went",
-        "seating took a few minutes",
         "the queue was longer than expected",
         "had to wait a bit for the order",
     ]
+    _minor_issues_nonfood = [
+        "parking was a bit of a hassle",
+        "wait time was slightly more than expected",
+        "it was quite busy when we visited",
+        "took a little longer than usual to be attended to",
+        "the queue was longer than expected",
+    ]
+    # Bug 2: use category-appropriate minor issues, never food/seating words for non-food
+    _is_nonfood_cat = cat_ctx["place_word"].lower() not in ["restaurant", "fine dining", "cafe", "food court", "food truck", "bakery"]
+    _minor_issues = _minor_issues_nonfood if _is_nonfood_cat else _minor_issues_food
 
     _negative_experiences = [
         "the food was cold when it arrived",
@@ -522,7 +546,7 @@ async def generate_reviews(
 Business Details:
 - Name: {business_name}
 - Category: {category}
-- City: {business_location}
+{city_line}
 - Customer's selected items: {services_str}
 - MANDATORY ITEMS RULE: If items are provided above, you MUST mention them naturally across the reviews. Do NOT mention all of them in every review as it sounds robotic. Instead, split them up! For example, mention 1-2 items in Review 1, a different item in Review 2, etc. NEVER use the exact same comma-separated string in multiple reviews. Make it sound completely natural and varied.
 - Session seed (do not output): {session_id}
@@ -547,13 +571,14 @@ Use these UNIQUE SEEDS for this scan — mandatory, do not ignore:
 - Seed 2 (Use in one review): Occasion context is "{_r2_context}"
 - Seed 3 (Use in one review): Mention this minor imperfection "{_r3_issue}"
 
-Ensure you strictly follow the LANGUAGE VARIATION rules (Hinglish/English mix).
-
 CHECKLIST before outputting:
 - No banned words used (e.g., "highly recommend" max once total)
 - No banned openings used
 - All 5 reviews use a DIFFERENT structure (Experience-first, Product-first, Emotion-first, Short casual, Slightly detailed)
-- Language variation applied: Exactly 3 English, Exactly 2 Hinglish
+- Slot 1=English, Slot 2=Hinglish, Slot 3=English, Slot 4=Hinglish, Slot 5=English — verified
+- Each English slot: zero Hindi/Urdu words — verified
+- Each Hinglish slot: consistent Roman-script mix, not English + one Hindi word — verified
+- Every variant is 20–60 words — counted and verified
 - City name in MAX 1 review
 - Business name in MAX 2 reviews
 - No two reviews start with the same word
@@ -568,7 +593,7 @@ Output ONLY a valid JSON array of exactly 5 strings. No explanation, no markdown
 Business Details:
 - Name: {business_name}
 - Category: {category}
-- City: {business_location}
+-{city_line}
 - Customer's selected items: {services_str}
 - MANDATORY ITEMS RULE: If items are provided above, you MUST mention them naturally across the reviews. Do NOT mention all of them in every review as it sounds robotic. Instead, split them up! For example, mention 1-2 items in Review 1, a different item in Review 2, etc. NEVER use the exact same comma-separated string in multiple reviews. Make it sound completely natural and varied.
 - Session seed (do not output): {session_id}
@@ -592,13 +617,14 @@ Use these UNIQUE SEEDS for this scan — mandatory, do not ignore:
 - Seed 2 (Use in one review): Occasion context is "{_r2_context}"
 - Seed 3 (Use in one review): Mention this minor imperfection "{_r3_issue}"
 
-Ensure you strictly follow the LANGUAGE VARIATION rules (Hinglish/English mix).
-
 CHECKLIST before outputting:
 - No banned words used (e.g., "highly recommend" max once total)
 - No banned openings used
 - All 3 reviews use a DIFFERENT structure
-- Language variation applied: Exactly 2 English, Exactly 1 Hinglish
+- Slot 1=English, Slot 2=Hinglish, Slot 3=English — verified
+- Each English slot: zero Hindi/Urdu words — verified
+- Each Hinglish slot: consistent Roman-script mix, not English + one Hindi word — verified
+- Every variant is 20–60 words — counted and verified
 - City name in MAX 1 review
 - Business name in MAX 2 reviews
 - No two reviews start with the same word
@@ -615,6 +641,10 @@ Output ONLY a valid JSON array of exactly 3 strings. No explanation, no markdown
 
     max_retries = 3
     final_reviews = []
+    # Bug 2 & 7: word lists for non-food filter
+    _food_words_banned = ["dishes", "menu", "seating", "ambience", "food", "taste"]
+    import re as _re
+    _food_re = _re.compile(r'\b(' + '|'.join(_food_words_banned) + r')\b', _re.IGNORECASE)
     
     for attempt in range(max_retries):
         try:
@@ -627,7 +657,7 @@ Output ONLY a valid JSON array of exactly 3 strings. No explanation, no markdown
                         {"role": "user", "content": user_prompt}
                     ],
                     temperature=0.95,
-                    max_tokens=1500,
+                    max_tokens=2000,
                     reasoning_effort="low",
                     timeout=15.0
                 )
@@ -655,7 +685,7 @@ Output ONLY a valid JSON array of exactly 3 strings. No explanation, no markdown
                             {"role": "user", "content": user_prompt}
                         ],
                         temperature=0.95,
-                        max_tokens=400
+                        max_tokens=1200
                     )
                     text = response.choices[0].message.content.strip()
                 else:
@@ -677,16 +707,45 @@ Output ONLY a valid JSON array of exactly 3 strings. No explanation, no markdown
             
             cleaned = [v.strip() for v in variants if isinstance(v, str) and len(v.strip()) > 10]
 
+
+
+
+
+
+
+
+
+
+
+            # Bug 1: check for unresolved placeholders
+            _bad_tokens = ("your city", "their city", "{", "}", "[business", "[city", "[name", "<name>", "<city")
+            cleaned_after_placeholder = [v for v in cleaned if not any(t in v.lower() for t in _bad_tokens)]
+            if len(cleaned_after_placeholder) < len(cleaned):
+                print(f"[DEBUG] Attempt {attempt+1}: {len(cleaned) - len(cleaned_after_placeholder)} variant(s) had placeholder tokens, retrying...")
+                cleaned = cleaned_after_placeholder
+            else:
+                cleaned = cleaned_after_placeholder
+
             is_valid = True
             combined_reviews = " ".join(cleaned).lower()
             if items_list and not any(item.lower() in combined_reviews for item in items_list):
                 print(f"[DEBUG] Attempt {attempt+1}: None of the items were mentioned in ANY review!")
                 is_valid = False
+            # Bug 2: for non-food categories, retry if banned food words appear
+            if is_valid and _is_nonfood_cat:
+                food_hit_variants = [v for v in cleaned if _food_re.search(v)]
+                if food_hit_variants:
+                    print(f"[DEBUG] Attempt {attempt+1}: {len(food_hit_variants)} non-food variant(s) contain food words, retrying...")
+                    is_valid = False
             if is_valid and len(cleaned) >= variant_count:
                 unique_reviews = set(cleaned)
                 if len(unique_reviews) < len(cleaned):
                     print(f"[DEBUG] Attempt {attempt+1}: Found duplicate reviews. Retrying...")
                     is_valid = False
+            # Bug 1: if cleaned is empty after placeholder filter, force retry
+            if len(cleaned) == 0 and attempt < max_retries - 1:
+                print(f"[DEBUG] Attempt {attempt+1}: All variants filtered out, retrying...")
+                is_valid = False
 
             if not is_valid and attempt < max_retries - 1:
                 print(f"[DEBUG] Retrying generation... (Attempt {attempt + 1}/{max_retries})")
