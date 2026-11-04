@@ -403,9 +403,6 @@ async def generate_reviews(
         "took a little longer than usual to be attended to",
         "the queue was longer than expected",
     ]
-    # Bug 2: use category-appropriate minor issues, never food/seating words for non-food
-    _is_nonfood_cat = cat_ctx["place_word"].lower() not in ["restaurant", "fine dining", "cafe", "food court", "food truck", "bakery"]
-    _minor_issues = _minor_issues_nonfood if _is_nonfood_cat else _minor_issues_food
 
     _negative_experiences = [
         "the food was cold when it arrived",
@@ -428,6 +425,10 @@ async def generate_reviews(
     ]
 
     cat_ctx = get_category_context(category)
+
+    # Bug 2: use category-appropriate minor issues, never food/seating words for non-food
+    _is_nonfood_cat = cat_ctx["place_word"].lower() not in ["restaurant", "fine dining", "cafe", "food court", "food truck", "bakery"]
+    _minor_issues = _minor_issues_nonfood if _is_nonfood_cat else _minor_issues_food
 
     if cat_ctx["place_word"] == "firm":
         _storyteller_contexts = [
